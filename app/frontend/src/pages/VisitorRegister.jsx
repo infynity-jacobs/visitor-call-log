@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api/client';
 import { useSearchParams } from 'react-router-dom';
 import { GlobalSearch } from '../components/GlobalSearch.jsx';
+import { BrandingHeader } from '../components/BrandingHeader.jsx';
 import { formatIstDateTime } from '../utils/timezone';
 
 const EMPTY_FORM = {
@@ -22,11 +23,6 @@ export default function VisitorRegister() {
   const [message, setMessage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [recent, setRecent] = useState([]);
-  const [mode, setMode] = useState('all');
-  const [date, setDate] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [filterMessage, setFilterMessage] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedRecord, setSelectedRecord] = useState(null);
 
@@ -51,19 +47,6 @@ export default function VisitorRegister() {
     if (!id) { setSelectedRecord(null); return; }
     api.request(`/visitors/${id}`).then((data) => setSelectedRecord(data.record)).catch((err) => setMessage({ type: 'error', text: err.message }));
   }, [searchParams]);
-
-  async function applyFilter() {
-    try {
-      setFilterMessage(null);
-      const filter = mode === 'single' ? { mode, date } : mode === 'range' ? { mode, startDate, endDate } : { mode: 'all' };
-      await loadRecent(filter);
-    } catch (err) { setFilterMessage({ type: 'error', text: err.message }); }
-  }
-
-  async function clearFilter() {
-    setMode('all'); setDate(''); setStartDate(''); setEndDate(''); setFilterMessage(null);
-    try { await loadRecent({ mode: 'all' }); } catch (err) { setFilterMessage({ type: 'error', text: err.message }); }
-  }
 
   function closeSelected() { setSelectedRecord(null); setSearchParams({}); }
 
@@ -105,6 +88,7 @@ export default function VisitorRegister() {
 
   return (
     <div>
+      <BrandingHeader />
       <h2>Visitor Register</h2>
       <GlobalSearch />
       {selectedRecord && (
@@ -235,19 +219,6 @@ export default function VisitorRegister() {
             <button type="button" className="secondary" onClick={resetForm} disabled={submitting}>Clear</button>
           </div>
         </form>
-      </div>
-
-      <div className="card">
-        <h3 style={{ marginTop: 0 }}>Filter records</h3>
-        <div className="tabs">
-          <button className={mode === 'all' ? 'active' : ''} onClick={() => setMode('all')}>All records</button>
-          <button className={mode === 'single' ? 'active' : ''} onClick={() => setMode('single')}>Specific date</button>
-          <button className={mode === 'range' ? 'active' : ''} onClick={() => setMode('range')}>Date range</button>
-        </div>
-        {mode === 'single' && <div style={{ maxWidth: 240 }}><label>Date</label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>}
-        {mode === 'range' && <div className="form-grid"><div><label>From date</label><input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></div><div><label>To date</label><input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></div></div>}
-        {filterMessage && <div className={`alert ${filterMessage.type}`} style={{ marginTop: '0.8rem' }}>{filterMessage.text}</div>}
-        <div className="actions"><button className="primary" onClick={applyFilter}>Apply filter</button><button className="secondary" onClick={clearFilter}>Clear filter</button></div>
       </div>
 
       <div className="card">

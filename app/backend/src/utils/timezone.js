@@ -27,14 +27,42 @@ function nextIstDate(dateString) {
   return `${next.getUTCFullYear()}-${pad(next.getUTCMonth() + 1)}-${pad(next.getUTCDate())}`;
 }
 
+function extractDateParts(value) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return [value.getUTCFullYear(), value.getUTCMonth() + 1, value.getUTCDate()];
+  }
+  const text = String(value ?? '').trim();
+  const match = text.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (match) return [Number(match[1]), Number(match[2]), Number(match[3])];
+  const parsed = new Date(text);
+  if (!Number.isNaN(parsed.getTime())) {
+    return [parsed.getUTCFullYear(), parsed.getUTCMonth() + 1, parsed.getUTCDate()];
+  }
+  return null;
+}
+
+function extractTimeParts(value) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return [value.getUTCHours(), value.getUTCMinutes(), value.getUTCSeconds()];
+  }
+  const text = String(value ?? '').trim();
+  const match = text.match(/(?:^|\s)(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?/);
+  if (match) return [Number(match[1]), Number(match[2]), Number(match[3] || 0)];
+  return null;
+}
+
 function formatIstDateTime(dateValue, timeValue) {
-  if (!dateValue || !timeValue) return '';
-  const date = String(dateValue).slice(0, 10);
-  const time = String(timeValue).slice(0, 8);
-  const [y, m, d] = date.split('-').map(Number);
-  const [hh, mm, ss] = time.split(':').map(Number);
-  const utc = new Date(Date.UTC(y, m - 1, d, hh, mm, ss || 0) + IST_OFFSET_MINUTES * 60000);
-  return `${utc.getUTCFullYear()}-${pad(utc.getUTCMonth() + 1)}-${pad(utc.getUTCDate())} ${pad(utc.getUTCHours())}:${pad(utc.getUTCMinutes())}:${pad(utc.getUTCSeconds())}`;
+  const dateParts = extractDateParts(dateValue);
+  const timeParts = extractTimeParts(timeValue);
+  if (!dateParts || !timeParts) return '';
+
+  const [y, m, d] = dateParts;
+  const [hh, mm, ss] = timeParts;
+  if (![y, m, d, hh, mm, ss].every(Number.isFinite)) return '';
+
+  // Stored values represent UTC clock values. Convert that clock value to IST.
+  const ist = new Date(Date.UTC(y, m - 1, d, hh, mm, ss) + IST_OFFSET_MINUTES * 60000);
+  return `${ist.getUTCFullYear()}-${pad(ist.getUTCMonth() + 1)}-${pad(ist.getUTCDate())} ${pad(ist.getUTCHours())}:${pad(ist.getUTCMinutes())}:${pad(ist.getUTCSeconds())}`;
 }
 
 module.exports = { istNowParts, utcBoundsForIstDate, nextIstDate, formatIstDateTime };

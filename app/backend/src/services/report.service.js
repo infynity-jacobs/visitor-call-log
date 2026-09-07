@@ -1,11 +1,44 @@
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
+const fs = require('fs/promises');
 const { query } = require('../db/pool');
 const { formatIstDateTime } = require('../utils/timezone');
 
 async function getBranding() {
   const result = await query('SELECT * FROM branding_settings WHERE id = 1');
   return result.rows[0] || {};
+}
+
+async function loadLogoBuffer(logoPath) {
+  if (!logoPath) return null;
+  const value = String(logoPath).trim();
+  try {
+    if (value.startsWith('data:image/')) {
+      const comma = value.indexOf(',');
+      if (comma < 0) return null;
+      const buffer = Buffer.from(value.slice(comma + 1), 'base64');
+      return buffer.length <= 5 * 1024 * 1024 ? buffer : null;
+    }
+    if (/^https?:\/\//i.test(value)) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      try {
+        const response = await fetch(value, { signal: controller.signal });
+        if (!response.ok) return null;
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.toLowerCase().startsWith('image/')) return null;
+        const buffer = Buffer.from(await response.arrayBuffer());
+        return buffer.length <= 5 * 1024 * 1024 ? buffer : null;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+    const buffer = await fs.readFile(value);
+    return buffer.length <= 5 * 1024 * 1024 ? buffer : null;
+  } catch (err) {
+    console.warn('[report] unable to load branding logo:', err.message);
+    return null;
+  }
 }
 
 function formatFilterLabel({ mode, date, startDate, endDate }) {
@@ -113,8 +146,17 @@ async function generatePdf({ title, columns, rows, filterLabel }) {
     doc.on('end', () => resolve(Buffer.concat(chunks)));
   });
 
+  const logoBuffer = await loadLogoBuffer(branding.logo_path);
+  if (logoBuffer) {
+    try {
+      doc.image(logoBuffer, doc.page.width / 2 - 32, doc.page.margins.top, { fit: [64, 64], align: 'center' });
+      doc.y = doc.page.margins.top + 70;
+    } catch (err) {
+      console.warn('[report] branding logo could not be rendered:', err.message);
+    }
+  }
   doc.fontSize(16).font('Helvetica-Bold').text(branding.org_name || 'Organization', { align: 'center' });
-  const contactLine = [branding.address, branding.phone, branding.email].filter(Boolean).join(' | ');
+  const contactLine = [branding.address, branding.phone, branding.email, branding.website].filter(Boolean).join(' | ');
   if (contactLine) doc.fontSize(9).font('Helvetica').text(contactLine, { align: 'center' });
   doc.moveDown(0.5);
   doc.fontSize(13).font('Helvetica-Bold').text(branding.report_header || title, { align: 'center' });

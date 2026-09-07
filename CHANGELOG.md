@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.1.1 — Report date/time fix
+
+- Fixed report Visitor/Call Log Date and Time rendering that could produce `NaN-NaN-Na` / `NaN:NaN`.
+- Hardened the common IST formatter to handle PostgreSQL date/time strings and JavaScript `Date` values safely.
+- Added regression tests for PostgreSQL-like values, `Date` objects, and invalid inputs.
+- Moved record filtering from Visitor Register and Call Log into the Reports page, with filtered-record preview and exports.
+- Applied configured branding to the main Visitor Register page.
+- Added PDF logo rendering for supported logo paths/URLs and included website in the PDF contact line.
+
 ## 1.1.0 - 2026-09-07
 
 ### Added

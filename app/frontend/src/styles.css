@@ -166,3 +166,9 @@ th { color: var(--muted); font-weight: 700; background: #f9fafb; }
 .subcard { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
 .inline-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 .table-wrap { overflow-x: auto; }
+
+.branding-header { display:flex; align-items:center; gap:1rem; margin-bottom:1rem; padding:.75rem 0; }
+.branding-logo { width:64px; height:64px; object-fit:contain; }
+.branding-name { font-size:1.2rem; font-weight:700; }
+.branding-meta { color:#6b7280; font-size:.85rem; margin-top:.15rem; }
+.report-preview { overflow-x:auto; margin-top:1rem; }
