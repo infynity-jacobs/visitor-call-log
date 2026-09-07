@@ -127,7 +127,7 @@ Run backend unit/integration tests with `npm test` from `app/backend`. See
 ## Git workflow
 
 - `main` is always deployable — `deploy/update.sh` defaults to `origin/main`.
-- Tag releases (`v1.0.0`, `v1.0.1`, `v1.1.0`, ...) so `deploy/update.sh <tag>` can target
+- Tag releases (`v1.0.0`, `v1.0.1`, `v1.1.0`, `v1.2.0`, ...) so `deploy/update.sh <tag>` can target
   a specific release rather than always tracking `main`.
 - Add new database changes as a new numbered migration file — never edit a migration
   that's already been applied anywhere (see [docs/MIGRATION.md](docs/MIGRATION.md)).
@@ -152,3 +152,11 @@ update.
 ## v1.1.0 feature release
 
 This release adds on-screen IST date filtering for Visitor Register and Call Log, global historical search, IST display/report timestamps, required Call Log Place/Phone validation, and complete administrator user management (edit, enable/disable, delete). User deletion preserves historical records by setting their `created_by` reference to NULL.
+
+
+## v1.2.0 additions
+- Super Administrator role for destructive record deletion and historical Excel import.
+- Historical Excel import accepts the first worksheet and treats source date/time values as Asia/Kolkata (IST).
+- Import supports VISITORS REGISTER.xlsx and Call Log.xlsx layouts and provides preview/validation before commit.
+- PDF report branding uses a compact inline logo/header layout.
+- Main page distinguishes VISITOR REGISTER and CALL LOG with separate color schemes.

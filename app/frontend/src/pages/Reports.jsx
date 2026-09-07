@@ -11,6 +11,7 @@ export default function Reports() {
   const [records, setRecords] = useState([]);
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [previewError, setPreviewError] = useState(null);
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailFormat, setEmailFormat] = useState('pdf');
   const [to, setTo] = useState('');

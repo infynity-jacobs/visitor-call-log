@@ -6,7 +6,7 @@ export function BrandingHeader() {
   useEffect(() => { api.request('/settings/branding').then((d) => setBranding(d.branding)).catch(() => {}); }, []);
   if (!branding) return null;
   return (
-    <div className="branding-header">
+    <div className={`branding-header ${branding.logo_position === 'right' ? 'logo-right' : ''}`}>
       {branding.logo_path && <img src={branding.logo_path} alt="Organization logo" className="branding-logo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
       <div>
         <div className="branding-name">{branding.org_name}</div>

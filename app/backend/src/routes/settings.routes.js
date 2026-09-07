@@ -1,6 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { authenticate, requireAdmin } = require('../middleware/auth');
+const { authenticate, requireAdmin, requireSuperAdmin } = require('../middleware/auth');
 const { query } = require('../db/pool');
 const { requireString, validateEmail, validatePositiveInt, validatePhone } = require('../utils/validators');
 const { ValidationError } = require('../middleware/errorHandler');
@@ -32,14 +32,15 @@ router.put('/branding', requireAdmin, async (req, res, next) => {
     const website = b.website ? requireString(b.website, 'Website', { maxLen: 255 }) : null;
     const reportHeader = b.reportHeader ? requireString(b.reportHeader, 'Report Header', { maxLen: 500 }) : null;
     const reportFooter = b.reportFooter ? requireString(b.reportFooter, 'Report Footer', { maxLen: 500 }) : null;
+    const logoPosition = ['left', 'right'].includes(b.logoPosition) ? b.logoPosition : 'left';
     const result = await query(
       `UPDATE branding_settings SET
          org_name = $1, logo_path = $2, address = $3, phone = $4,
-         email = $5, website = $6, report_header = $7, report_footer = $8,
+         email = $5, website = $6, report_header = $7, report_footer = $8, logo_position = $9,
          updated_at = now()
        WHERE id = 1 RETURNING *`,
       [orgName, b.logoPath || null, b.address || null, phone,
-        email, website, reportHeader, reportFooter]
+        email, website, reportHeader, reportFooter, logoPosition]
     );
     res.json({ branding: result.rows[0] });
   } catch (err) {
@@ -122,8 +123,9 @@ router.post('/users', requireAdmin, async (req, res, next) => {
     const username = requireString(req.body.username, 'Username', { maxLen: 100 });
     const password = requireString(req.body.password, 'Password');
     const fullName = requireString(req.body.fullName, 'Full name', { maxLen: 255, optional: true });
-    if (!['admin', 'user'].includes(req.body.role)) throw new ValidationError('Role must be admin or user.');
+    if (!['super_admin', 'admin', 'user'].includes(req.body.role)) throw new ValidationError('Role must be super_admin, admin or user.');
     const role = req.body.role;
+    if (role === 'super_admin' && req.user.role !== 'super_admin') throw new ValidationError('Only a Super Administrator can create a Super Administrator account.');
     if (password.length < 8) throw new ValidationError('Password must be at least 8 characters.');
 
     const hash = await bcrypt.hash(password, 10);
@@ -142,47 +144,34 @@ router.put('/users/:id', requireAdmin, async (req, res, next) => {
   try {
     const targetId = Number(req.params.id);
     if (!Number.isSafeInteger(targetId) || targetId < 1) throw new ValidationError('Invalid user ID.');
-    if (typeof req.body.isActive === 'boolean' && targetId === Number(req.user.id) && req.body.isActive === false) {
-      throw new ValidationError('You cannot deactivate your own administrator account.');
+    const targetRes = await query('SELECT id, role, is_active FROM users WHERE id = $1', [targetId]);
+    if (!targetRes.rows.length) return res.status(404).json({ error: 'User not found.' });
+    const target = targetRes.rows[0];
+    if (targetId === Number(req.user.id) && req.body.isActive === false) throw new ValidationError('You cannot deactivate your own administrator account.');
+    if (target.role === 'super_admin' && req.user.role !== 'super_admin' && (req.body.role !== undefined || req.body.isActive !== undefined)) throw new ValidationError('Only a Super Administrator can modify a Super Administrator account.');
+    if (req.body.role === 'super_admin' && req.user.role !== 'super_admin') throw new ValidationError('Only a Super Administrator can assign the Super Administrator role.');
+    if (!['super_admin', 'admin', 'user'].includes(req.body.role || target.role)) throw new ValidationError('Role must be super_admin, admin or user.');
+    const resultingRole = req.body.role === undefined ? target.role : req.body.role;
+    const resultingActive = req.body.isActive === undefined ? target.is_active : req.body.isActive;
+    if (['admin','super_admin'].includes(target.role) && (!resultingActive || resultingRole === 'user')) {
+      const admins = await query("SELECT COUNT(*)::int AS count FROM users WHERE role IN ('admin','super_admin') AND is_active = true AND id <> $1", [targetId]);
+      if (admins.rows[0].count === 0) throw new ValidationError('At least one active administrator account must remain.');
     }
-    if (req.body.role === 'user' || req.body.isActive === false) {
-      const target = await query('SELECT id, role, is_active FROM users WHERE id = $1', [targetId]);
-      if (!target.rows.length) return res.status(404).json({ error: 'User not found.' });
-      if (target.rows[0].role === 'admin' && (req.body.role === 'user' || req.body.isActive === false)) {
-        const admins = await query("SELECT COUNT(*)::int AS count FROM users WHERE role = 'admin' AND is_active = true AND id <> $1", [targetId]);
-        if (admins.rows[0].count === 0) throw new ValidationError('At least one active administrator account must remain.');
-      }
+    if (target.role === 'super_admin' && (resultingRole !== 'super_admin' || !resultingActive)) {
+      const supers = await query("SELECT COUNT(*)::int AS count FROM users WHERE role = 'super_admin' AND is_active = true AND id <> $1", [targetId]);
+      if (supers.rows[0].count === 0) throw new ValidationError('At least one active Super Administrator account must remain.');
     }
-    const sets = [];
-    const params = [];
-    let idx = 1;
+    const sets = [], params = []; let idx = 1;
     if (req.body.username !== undefined) { sets.push(`username = $${idx++}`); params.push(requireString(req.body.username, 'Username', { maxLen: 100 })); }
     if (req.body.fullName !== undefined) { sets.push(`full_name = $${idx++}`); params.push(requireString(req.body.fullName, 'Full name', { maxLen: 255 })); }
-    if (req.body.role !== undefined) {
-      if (!['admin', 'user'].includes(req.body.role)) throw new ValidationError('Role must be admin or user.');
-      sets.push(`role = $${idx++}`); params.push(req.body.role);
-    }
+    if (req.body.role !== undefined) { sets.push(`role = $${idx++}`); params.push(req.body.role); }
     if (typeof req.body.isActive === 'boolean') { sets.push(`is_active = $${idx++}`); params.push(req.body.isActive); }
-    if (req.body.password) {
-      if (req.body.password.length < 8) throw new ValidationError('Password must be at least 8 characters.');
-      const hash = await bcrypt.hash(req.body.password, 10);
-      sets.push(`password_hash = $${idx++}`);
-      params.push(hash);
-    }
+    if (req.body.password) { if (req.body.password.length < 8) throw new ValidationError('Password must be at least 8 characters.'); const hash = await bcrypt.hash(req.body.password, 10); sets.push(`password_hash = $${idx++}`); params.push(hash); }
     if (sets.length === 0) throw new ValidationError('No fields provided to update.');
-    sets.push('updated_at = now()');
-    params.push(req.params.id);
-
-    const result = await query(
-      `UPDATE users SET ${sets.join(', ')} WHERE id = $${idx} RETURNING id, username, full_name, role, is_active`,
-      params
-    );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'User not found.' });
+    sets.push('updated_at = now()'); params.push(targetId);
+    const result = await query(`UPDATE users SET ${sets.join(', ')} WHERE id = $${idx} RETURNING id, username, full_name, role, is_active`, params);
     res.json({ user: result.rows[0] });
-  } catch (err) {
-    if (err.code === '23505') return res.status(409).json({ error: 'Username already exists.' });
-    next(err);
-  }
+  } catch (err) { if (err.code === '23505') return res.status(409).json({ error: 'Username already exists.' }); next(err); }
 });
 
 router.delete('/users/:id', requireAdmin, async (req, res, next) => {
@@ -194,8 +183,10 @@ router.delete('/users/:id', requireAdmin, async (req, res, next) => {
     const target = await query('SELECT id, role, is_active FROM users WHERE id = $1', [targetId]);
     if (!target.rows.length) return res.status(404).json({ error: 'User not found.' });
 
-    if (target.rows[0].role === 'admin' && target.rows[0].is_active) {
-      const admins = await query("SELECT COUNT(*)::int AS count FROM users WHERE role = 'admin' AND is_active = true AND id <> $1", [targetId]);
+    if (target.rows[0].role === 'super_admin' && req.user.role !== 'super_admin') throw new ValidationError('Only a Super Administrator can delete a Super Administrator account.');
+
+    if (['admin', 'super_admin'].includes(target.rows[0].role) && target.rows[0].is_active) {
+      const admins = await query("SELECT COUNT(*)::int AS count FROM users WHERE role IN ('admin','super_admin') AND is_active = true AND id <> $1", [targetId]);
       if (admins.rows[0].count === 0) throw new ValidationError('At least one active administrator account must remain.');
     }
 

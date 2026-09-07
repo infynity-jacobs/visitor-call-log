@@ -21,3 +21,8 @@ test('IST date boundaries convert to UTC correctly', () => {
   assert.deepEqual(utcBoundsForIstDate('2026-09-07'), { date: '2026-09-06', time: '18:30:00' });
   assert.equal(nextIstDate('2026-09-07'), '2026-09-08');
 });
+
+test('formatIstDateTime handles Date and time objects without NaN', () => {
+  const { formatIstDateTime } = require('../../app/backend/src/utils/timezone');
+  assert.equal(formatIstDateTime(new Date(Date.UTC(2024,11,17)), '10:04:00'), '2024-12-17 15:34:00');
+});

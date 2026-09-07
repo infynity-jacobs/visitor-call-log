@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api/client';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { GlobalSearch } from '../components/GlobalSearch.jsx';
 import { BrandingHeader } from '../components/BrandingHeader.jsx';
 import { formatIstDateTime } from '../utils/timezone';
+import { useAuth } from '../context/AuthContext.jsx';
 
 const EMPTY_FORM = {
   name: '', place: '', phone: '', purpose: '',
@@ -17,6 +18,8 @@ function newIdempotencyKey() {
 }
 
 export default function VisitorRegister() {
+  const { isSuperAdmin } = useAuth();
+  const navigate = useNavigate();
   const [options, setOptions] = useState({ purposeOptions: [], enquiryTypeOptions: [], meetingPersonOptions: [] });
   const [form, setForm] = useState(EMPTY_FORM);
   const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey());
@@ -47,6 +50,11 @@ export default function VisitorRegister() {
     if (!id) { setSelectedRecord(null); return; }
     api.request(`/visitors/${id}`).then((data) => setSelectedRecord(data.record)).catch((err) => setMessage({ type: 'error', text: err.message }));
   }, [searchParams]);
+
+  async function deleteRecord(id) {
+    if (!window.confirm('Permanently delete this record? This cannot be undone.')) return;
+    try { await api.request(`${'/visitors'}/${id}`, { method: 'DELETE' }); await loadRecent(); if (selectedRecord?.id === id) closeSelected(); setMessage({ type: 'success', text: 'Record permanently deleted.' }); } catch (err) { setMessage({ type: 'error', text: err.message }); }
+  }
 
   function closeSelected() { setSelectedRecord(null); setSearchParams({}); }
 
@@ -89,7 +97,8 @@ export default function VisitorRegister() {
   return (
     <div>
       <BrandingHeader />
-      <h2>Visitor Register</h2>
+      <div className="module-switch"><button className="module-card visitor" onClick={() => navigate('/')}><strong>VISITOR REGISTER</strong><span>Register and manage visitors</span></button><button className="module-card call" onClick={() => navigate('/calllog')}><strong>CALL LOG</strong><span>Record and manage phone calls</span></button></div>
+      <h2>VISITOR REGISTER</h2>
       <GlobalSearch />
       {selectedRecord && (
         <div className="card selected-record">
@@ -225,7 +234,7 @@ export default function VisitorRegister() {
         <div className="section-heading"><h3 style={{ marginTop: 0, marginBottom: 0 }}>Recent entries</h3><span className="muted">{recent.length} record{recent.length === 1 ? '' : 's'}</span></div>
         <table>
           <thead>
-            <tr><th>S.No.</th><th>Date</th><th>Time</th><th>Name</th><th>Place</th><th>Phone</th><th>Purpose</th></tr>
+            <tr><th>S.No.</th><th>Date</th><th>Time</th><th>Name</th><th>Place</th><th>Phone</th><th>Purpose</th>{isSuperAdmin && <th>Actions</th>}</tr>
           </thead>
           <tbody>
             {recent.map((r) => (
@@ -236,10 +245,10 @@ export default function VisitorRegister() {
                 <td>{r.name}</td>
                 <td>{r.place}</td>
                 <td>{r.phone}</td>
-                <td>{r.purpose}</td>
+                <td>{r.purpose}</td>{isSuperAdmin && <td><button className="danger" onClick={() => deleteRecord(r.id)}>Delete</button></td>}
               </tr>
             ))}
-            {recent.length === 0 && <tr><td colSpan={7} style={{ color: '#6b7280' }}>No entries yet.</td></tr>}
+            {recent.length === 0 && <tr><td colSpan={isSuperAdmin ? 8 : 7} style={{ color: '#6b7280' }}>No entries yet.</td></tr>}
           </tbody>
         </table>
       </div>

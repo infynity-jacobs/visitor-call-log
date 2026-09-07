@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api/client';
 import { useSearchParams } from 'react-router-dom';
 import { formatIstDateTime } from '../utils/timezone';
+import { useAuth } from '../context/AuthContext.jsx';
 
 const EMPTY_FORM = { name: '', place: '', phone: '', reason: '' };
 
@@ -10,6 +11,7 @@ function newIdempotencyKey() {
 }
 
 export default function CallLog() {
+  const { isSuperAdmin } = useAuth();
   const [form, setForm] = useState(EMPTY_FORM);
   const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey());
   const [message, setMessage] = useState(null);
@@ -31,6 +33,11 @@ export default function CallLog() {
     if (!id) { setSelectedRecord(null); return; }
     api.request(`/calllog/${id}`).then((data) => setSelectedRecord(data.record)).catch((err) => setFilterMessage({ type: 'error', text: err.message }));
   }, [searchParams]);
+
+  async function deleteRecord(id) {
+    if (!window.confirm('Permanently delete this record? This cannot be undone.')) return;
+    try { await api.request(`${'/calllog'}/${id}`, { method: 'DELETE' }); await loadRecent(); if (selectedRecord?.id === id) closeSelected(); setMessage({ type: 'success', text: 'Record permanently deleted.' }); } catch (err) { setMessage({ type: 'error', text: err.message }); }
+  }
 
   function closeSelected() { setSelectedRecord(null); setSearchParams({}); }
 
@@ -65,7 +72,7 @@ export default function CallLog() {
 
   return (
     <div>
-      <h2>Call Log</h2>
+      <h2>CALL LOG</h2>
       {selectedRecord && (
         <div className="card selected-record">
           <div className="section-heading"><h3 style={{ margin: 0 }}>Call Log Record #{selectedRecord.id}</h3><button className="secondary" onClick={closeSelected}>Close</button></div>
@@ -112,7 +119,7 @@ export default function CallLog() {
       <div className="card">
         <div className="section-heading"><h3 style={{ marginTop: 0, marginBottom: 0 }}>Recent entries</h3><span className="muted">{recent.length} record{recent.length === 1 ? '' : 's'}</span></div>
         <table>
-          <thead><tr><th>S.No.</th><th>Date</th><th>Time</th><th>Name</th><th>Place</th><th>Phone</th><th>Reason</th></tr></thead>
+          <thead><tr><th>S.No.</th><th>Date</th><th>Time</th><th>Name</th><th>Place</th><th>Phone</th><th>Reason</th>{isSuperAdmin && <th>Actions</th>}</tr></thead>
           <tbody>
             {recent.map((r) => (
               <tr key={r.id}>
@@ -122,10 +129,10 @@ export default function CallLog() {
                 <td>{r.name}</td>
                 <td>{r.place}</td>
                 <td>{r.phone}</td>
-                <td>{r.reason}</td>
+                <td>{r.reason}</td>{isSuperAdmin && <td><button className="danger" onClick={() => deleteRecord(r.id)}>Delete</button></td>}
               </tr>
             ))}
-            {recent.length === 0 && <tr><td colSpan={7} style={{ color: '#6b7280' }}>No entries yet.</td></tr>}
+            {recent.length === 0 && <tr><td colSpan={isSuperAdmin ? 8 : 7} style={{ color: '#6b7280' }}>No entries yet.</td></tr>}
           </tbody>
         </table>
       </div>

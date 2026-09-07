@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0
+- Compact PDF branding header with inline logo.
+- Super Administrator destructive record deletion with audit logging.
+- Historical Excel import for VISITOR REGISTER and CALL LOG with preview/validation.
+- Super Administrator role.
+- Main-page VISITOR REGISTER / CALL LOG visual distinction.
+
+
 ## v1.1.1 — Report date/time fix
 
 - Fixed report Visitor/Call Log Date and Time rendering that could produce `NaN-NaN-Na` / `NaN:NaN`.

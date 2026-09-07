@@ -10,7 +10,7 @@ sudo ./deploy/update.sh
 By default this updates to `origin/main`. To update to a specific tag or branch:
 
 ```bash
-sudo ./deploy/update.sh v1.1.0
+sudo ./deploy/update.sh v1.2.0
 ```
 
 ## What it does
@@ -29,7 +29,7 @@ sudo ./deploy/update.sh v1.1.0
 ```
 Update complete.
 Previous Version: 1.0.0
-New Version:      1.1.0
+New Version:      1.2.0
 ```
 
 ## If something goes wrong
@@ -77,8 +77,10 @@ The update process fetches the repository, verifies a clean working tree, create
 Do not run the update script from `/opt/visitor-call-log`; run it from the Git checkout.
 
 
-## v1.1.0 update notes
+## v1.2.0 update notes
 
-The v1.1.0 release includes database migration `004_user_delete_and_search`, which changes user ownership foreign keys to `ON DELETE SET NULL` so deleting a user never deletes historical Visitor Register, Call Log, or audit records. The update script applies this migration automatically after taking its normal database backup.
+The v1.2.0 release includes database migration `005_v120_superadmin_import_delete`. It adds the Super Administrator role, import metadata, historical SNO fields, and logo-position configuration. The update script applies this migration automatically after taking its normal database backup.
+
+Historical Excel imports are intended for the supplied VISITORS REGISTER and Call Log workbooks. Source date/time values are treated as Asia/Kolkata (IST) and stored in the application's existing UTC-clock representation. Only the first worksheet is imported; preview and validation are required before commit.
 
 Application date/time display and report timestamps are presented in Asia/Kolkata (IST). Stored date/time values remain database UTC clock values for backward compatibility; filters convert IST calendar dates to the corresponding UTC bounds.

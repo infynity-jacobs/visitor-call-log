@@ -1,9 +1,9 @@
 const express = require('express');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireSuperAdmin } = require('../middleware/auth');
 const visitorsService = require('../services/visitors.service');
 const { requireString, validatePhone, validateDate, validateTime, validatePositiveInt, validateNonNegativeInt, validateDateFilter } = require('../utils/validators');
 const { ValidationError } = require('../middleware/errorHandler');
-const { query } = require('../db/pool');
+const { query, withTransaction } = require('../db/pool');
 
 const router = express.Router();
 router.use(authenticate);
@@ -121,6 +121,23 @@ router.get('/:id', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+
+router.delete('/:id', requireSuperAdmin, async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id < 1) throw new ValidationError('Invalid record ID.');
+    const result = await withTransaction(async (client) => {
+      const found = await client.query('SELECT id, name, purpose FROM visitors WHERE id = $1', [id]);
+      if (!found.rows.length) return null;
+      await client.query('DELETE FROM visitors WHERE id = $1', [id]);
+      await client.query('INSERT INTO audit_log (user_id, action, details) VALUES ($1, $2, $3)', [req.user.id, 'record_delete', { recordType: 'visitors', recordId: id, deletedName: found.rows[0].name }]);
+      return found.rows[0];
+    });
+    if (!result) return res.status(404).json({ error: 'Record not found.' });
+    res.json({ success: true, id });
+  } catch (err) { next(err); }
 });
 
 module.exports = router;

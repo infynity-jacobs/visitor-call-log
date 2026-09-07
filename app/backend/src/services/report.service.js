@@ -146,25 +146,26 @@ async function generatePdf({ title, columns, rows, filterLabel }) {
     doc.on('end', () => resolve(Buffer.concat(chunks)));
   });
 
+  const top = doc.page.margins.top;
+  const headerHeight = 72;
   const logoBuffer = await loadLogoBuffer(branding.logo_path);
+  const logoWidth = logoBuffer ? 58 : 0;
+  const logoRight = logoBuffer && branding.logo_position === 'right';
   if (logoBuffer) {
-    try {
-      doc.image(logoBuffer, doc.page.width / 2 - 32, doc.page.margins.top, { fit: [64, 64], align: 'center' });
-      doc.y = doc.page.margins.top + 70;
-    } catch (err) {
-      console.warn('[report] branding logo could not be rendered:', err.message);
-    }
+    try { doc.image(logoBuffer, logoRight ? doc.page.width - doc.page.margins.right - 58 : doc.page.margins.left, top, { fit: [58, 58], align: logoRight ? 'right' : 'left', valign: 'center' }); }
+    catch (err) { console.warn('[report] branding logo could not be rendered:', err.message); }
   }
-  doc.fontSize(16).font('Helvetica-Bold').text(branding.org_name || 'Organization', { align: 'center' });
+  const textX = logoRight ? doc.page.margins.left : (logoBuffer ? doc.page.margins.left + 72 : doc.page.margins.left);
+  const textWidth = doc.page.width - textX - (logoRight ? 72 : doc.page.margins.right);
+  doc.fontSize(15).font('Helvetica-Bold').text(branding.org_name || 'Organization', textX, top + 2, { width: textWidth, align: 'left' });
   const contactLine = [branding.address, branding.phone, branding.email, branding.website].filter(Boolean).join(' | ');
-  if (contactLine) doc.fontSize(9).font('Helvetica').text(contactLine, { align: 'center' });
-  doc.moveDown(0.5);
-  doc.fontSize(13).font('Helvetica-Bold').text(branding.report_header || title, { align: 'center' });
-  doc.fontSize(10).font('Helvetica-Bold').text(`${title} — ${filterLabel}`, { align: 'center' });
-  doc.fontSize(8).font('Helvetica').fillColor('#666666')
-    .text(`Generated (IST): ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false })}`, { align: 'center' });
+  if (contactLine) doc.fontSize(8.5).font('Helvetica').text(contactLine, textX, top + 23, { width: textWidth, align: 'left' });
+  doc.fontSize(12).font('Helvetica-Bold').text(branding.report_header || title, textX, top + 41, { width: textWidth, align: 'left' });
+  doc.fontSize(9).font('Helvetica-Bold').text(`${title} — ${filterLabel}`, textX, top + 57, { width: textWidth, align: 'left' });
+  doc.fontSize(7.5).font('Helvetica').fillColor('#666666').text(`Generated (IST): ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false })}`, textX, top + 70, { width: textWidth, align: 'left' });
   doc.fillColor('#000000');
-  doc.moveDown(1);
+  doc.y = top + headerHeight + 4;
+
 
   const startX = doc.page.margins.left;
   const usableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;

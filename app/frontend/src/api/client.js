@@ -65,4 +65,6 @@ async function downloadReport(type, format, params) {
   URL.revokeObjectURL(url);
 }
 
-export const api = { request, downloadReport, getToken, setSession, clearSession, getUser };
+async function uploadJson(path, payload) { return request(path, { method: 'POST', body: payload }); }
+
+export const api = { request, downloadReport, uploadJson, getToken, setSession, clearSession, getUser };

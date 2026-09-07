@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api/client';
 import { OptionsManager } from '../components/OptionsManager.jsx';
+import DataImport from '../components/DataImport.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 
 function BrandingSection() {
   const [form, setForm] = useState(null);
@@ -25,7 +27,7 @@ function BrandingSection() {
         method: 'PUT',
         body: {
           orgName: form.org_name, logoPath: form.logo_path, address: form.address, phone: form.phone,
-          email: form.email, website: form.website, reportHeader: form.report_header, reportFooter: form.report_footer
+          email: form.email, website: form.website, logoPosition: form.logo_position, reportHeader: form.report_header, reportFooter: form.report_footer
         }
       });
       setForm(data.branding);
@@ -47,6 +49,7 @@ function BrandingSection() {
         <div className="form-grid">
           <div><label>Organization Name *</label><input value={form.org_name || ''} onChange={(e) => update('org_name', e.target.value)} required /></div>
           <div><label>Logo path/URL</label><input value={form.logo_path || ''} onChange={(e) => update('logo_path', e.target.value)} /></div>
+          <div><label>Logo position</label><select value={form.logo_position || 'left'} onChange={(e) => update('logo_position', e.target.value)}><option value="left">Left</option><option value="right">Right</option></select></div>
           <div><label>Phone</label><input value={form.phone || ''} onChange={(e) => update('phone', e.target.value)} /></div>
           <div><label>Email</label><input value={form.email || ''} onChange={(e) => update('email', e.target.value)} /></div>
           <div><label>Website</label><input value={form.website || ''} onChange={(e) => update('website', e.target.value)} /></div>
@@ -232,7 +235,7 @@ function UsersSection() {
           <tbody>
             {users.map((u) => (
               <tr key={u.id}>
-                <td>{u.username}</td><td>{u.full_name || '—'}</td><td>{u.role === 'admin' ? 'Administrator' : 'Normal user'}</td>
+                <td>{u.username}</td><td>{u.full_name || '—'}</td><td>{u.role === 'super_admin' ? 'Super Administrator' : u.role === 'admin' ? 'Administrator' : 'Normal user'}</td>
                 <td><span className={`badge ${u.is_active ? 'enabled' : 'disabled'}`}>{u.is_active ? 'Active' : 'Disabled'}</span></td>
                 <td><div className="inline-actions">
                   <button className="secondary" onClick={() => beginEdit(u)} disabled={busy}>Edit</button>
@@ -252,7 +255,7 @@ function UsersSection() {
             <div><label>Username *</label><input value={editForm.username} onChange={(e) => setEditForm({ ...editForm, username: e.target.value })} required /></div>
             <div><label>Full name *</label><input value={editForm.fullName} onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })} required /></div>
             <div><label>New password</label><input type="password" minLength="8" placeholder="Leave blank to keep current" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} /></div>
-            <div><label>Role</label><select value={editForm.role} onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}><option value="user">Normal user</option><option value="admin">Administrator</option></select></div>
+            <div><label>Role</label><select value={editForm.role} onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}><option value="user">Normal user</option><option value="admin">Administrator</option><option value="super_admin">Super Administrator</option></select></div>
             <div><label>Status</label><select value={editForm.isActive ? 'active' : 'disabled'} onChange={(e) => setEditForm({ ...editForm, isActive: e.target.value === 'active' })}><option value="active">Active</option><option value="disabled">Disabled</option></select></div>
           </div>
           <div className="actions"><button type="submit" className="primary" disabled={busy}>{busy ? 'Saving…' : 'Save changes'}</button><button type="button" className="secondary" onClick={cancelEdit}>Cancel</button></div>
@@ -265,7 +268,7 @@ function UsersSection() {
           <div><label>Username *</label><input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required /></div>
           <div><label>Full name *</label><input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required /></div>
           <div><label>Password * (min 8 chars)</label><input type="password" minLength="8" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required /></div>
-          <div><label>Role</label><select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}><option value="user">Normal user</option><option value="admin">Administrator</option></select></div>
+          <div><label>Role</label><select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}><option value="user">Normal user</option><option value="admin">Administrator</option><option value="super_admin">Super Administrator</option></select></div>
         </div>
         <div className="actions"><button type="submit" className="primary" disabled={busy}>{busy ? 'Adding…' : 'Add user'}</button></div>
       </form>
@@ -274,6 +277,7 @@ function UsersSection() {
 }
 
 export default function Settings() {
+  const { isSuperAdmin } = useAuth();
   const [version, setVersion] = useState('');
 
   useEffect(() => {
@@ -289,6 +293,7 @@ export default function Settings() {
       <BrandingSection />
       <SmtpSection />
       <UsersSection />
+      {isSuperAdmin && <DataImport />}
       <div className="card" style={{ color: '#6b7280', fontSize: '0.85rem' }}>Application version: {version}</div>
     </div>
   );

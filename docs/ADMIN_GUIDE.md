@@ -75,3 +75,10 @@ Administrators can add users and manage existing users with **Edit**, **Enable/D
 ### Global Search
 
 The Visitor Register main page includes Global Search across the complete Visitor Register and Call Log history. Search is case-insensitive and supports partial matches across relevant text fields and IST record dates. Selecting a result opens the corresponding record in its module.
+
+
+## Super Administrator and historical import
+
+Version 1.2.0 adds a Super Administrator role. The seeded `admin` account is promoted to Super Administrator by migration 005. Only Super Administrators can permanently delete Visitor Register or Call Log records and import historical Excel data. Destructive record deletion is audited.
+
+Historical Excel import is available under Settings for Super Administrators. The importer previews and validates the first worksheet, treats source dates/times as Asia/Kolkata (IST), and preserves the spreadsheet SNO as `source_sno`. The supplied historical workbooks contain a `VISITORS` first sheet and a `Log` first sheet; auxiliary SNO/AREA sheets are not imported.

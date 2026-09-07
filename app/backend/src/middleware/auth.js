@@ -28,8 +28,15 @@ async function authenticate(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
-  if (!req.user || req.user.role !== 'admin') {
+  if (!req.user || !['admin', 'super_admin'].includes(req.user.role)) {
     return res.status(403).json({ error: 'Administrator access required.' });
+  }
+  return next();
+}
+
+function requireSuperAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'super_admin') {
+    return res.status(403).json({ error: 'Super Administrator access required.' });
   }
   return next();
 }

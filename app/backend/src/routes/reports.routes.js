@@ -26,6 +26,14 @@ function titleFor(type) {
   return type === 'visitors' ? 'Visitors Register Report' : 'Call Log Report';
 }
 
+router.get('/:type/records', async (req, res, next) => {
+  try {
+    const filter = validateDateFilter(req.query);
+    const { rows, columns } = await loadDataset(req.params.type, filter);
+    res.json({ type: req.params.type, filter, columns: columns.map((c) => c.header), records: rows.map((r, index) => ({ ...r, report_sno: index + 1 })) });
+  } catch (err) { next(err); }
+});
+
 router.get('/:type/:format', async (req, res, next) => {
   try {
     const { type, format } = req.params;
