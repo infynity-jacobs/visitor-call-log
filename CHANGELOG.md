@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.2
+- Rebuilt npm lockfiles from the known-good v1.0.5 dependency tree; no application dependency changes.
+
 ## 1.2.1
 - Compact PDF branding header with inline logo.
 - Super Administrator destructive record deletion with audit logging.
