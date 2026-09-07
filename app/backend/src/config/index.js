@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 function required(name, fallback) {
@@ -34,5 +36,13 @@ module.exports = {
 
   uploadsDir: process.env.UPLOADS_DIR || './uploads',
 
-  version: process.env.APP_VERSION || '1.0.0'
+  // VERSION is the single source of truth for the application release.
+  // APP_VERSION is retained only as a compatibility fallback for older installs.
+  version: (() => {
+    try {
+      return fs.readFileSync(path.resolve(__dirname, '../../../VERSION'), 'utf8').trim();
+    } catch (_) {
+      return process.env.APP_VERSION || '1.0.0';
+    }
+  })()
 };

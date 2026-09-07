@@ -48,7 +48,8 @@ if [[ -n "$(git_as_user "status --porcelain")" ]]; then
 fi
 
 OLD_VERSION="$(cat "$APP_DIR/VERSION" 2>/dev/null || echo unknown)"
-OLD_COMMIT="$(git_as_user "rev-parse --short HEAD" 2>/dev/null || echo unknown)"
+DEPLOY_MARKER="$APP_DIR/.deploy-commit"
+OLD_COMMIT="$(cat "$DEPLOY_MARKER" 2>/dev/null || echo unknown)"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 STAGE_DIR="$(mktemp -d /tmp/visitor-call-log-release.XXXXXX)"
 OLD_CODE_BACKUP="$RELEASE_BACKUP_DIR/${TIMESTAMP}-${OLD_VERSION}"
@@ -134,6 +135,7 @@ log "Creating rollback copy of current application code"
 mkdir -p "$OLD_CODE_BACKUP"
 rsync -a \
   --exclude 'app/backend/.env' \
+  --exclude '.deploy-commit' \
   --exclude 'app/backend/node_modules' \
   --exclude 'app/frontend/node_modules' \
   "$APP_DIR"/ "$OLD_CODE_BACKUP"/
@@ -142,6 +144,7 @@ log "Staging target release"
 rsync -a --delete \
   --exclude '.git' \
   --exclude 'app/backend/.env' \
+  --exclude '.deploy-commit' \
   --exclude 'app/backend/node_modules' \
   --exclude 'app/frontend/node_modules' \
   --exclude 'app/frontend/dist' \
@@ -193,7 +196,10 @@ sleep 2
 systemctl is-active --quiet "$SERVICE_NAME" || fail "Service failed to start. Check journalctl -u $SERVICE_NAME."
 
 log "Running application health check"
-bash "$APP_DIR/scripts/health_check.sh"
+bash "$APP_DIR/scripts/health_check.sh" "http://localhost:3000/api/health" "$TARGET_VERSION"
+
+printf '%s\n' "$TARGET_COMMIT" > "$DEPLOY_MARKER"
+chown "$APP_USER":"$APP_USER" "$DEPLOY_MARKER"
 
 trap - ERR
 
