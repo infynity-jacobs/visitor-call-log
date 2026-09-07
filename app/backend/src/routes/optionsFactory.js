@@ -83,22 +83,10 @@ function buildOptionsRouter(tableName) {
       if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
         throw new ValidationError('orderedIds must be a non-empty array.');
       }
-      const ids = orderedIds.map((id) => Number(id));
-      if (ids.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
-        throw new ValidationError('orderedIds must contain only positive integer IDs.');
-      }
-      if (new Set(ids).size !== ids.length) {
-        throw new ValidationError('orderedIds must not contain duplicate IDs.');
-      }
-      const existing = await query(`SELECT id FROM ${tableName} ORDER BY id`);
-      const existingIds = existing.rows.map((row) => Number(row.id));
-      if (ids.length !== existingIds.length || ids.some((id) => !existingIds.includes(id))) {
-        throw new ValidationError('orderedIds must contain every option exactly once.');
-      }
       await withTransaction(async (client) => {
         for (let i = 0; i < orderedIds.length; i += 1) {
           // eslint-disable-next-line no-await-in-loop
-          await client.query(`UPDATE ${tableName} SET sort_order = $1, updated_at = now() WHERE id = $2`, [i + 1, ids[i]]);
+          await client.query(`UPDATE ${tableName} SET sort_order = $1, updated_at = now() WHERE id = $2`, [i + 1, orderedIds[i]]);
         }
       });
       res.json({ success: true });

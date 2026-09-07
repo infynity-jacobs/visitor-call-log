@@ -24,7 +24,7 @@ router.post('/login', loginLimiter, async (req, res, next) => {
     const password = requireString(req.body.password, 'Password');
 
     const result = await query(
-      'SELECT id, username, password_hash, full_name, role, is_active, session_version FROM users WHERE username = $1',
+      'SELECT id, username, password_hash, full_name, role, is_active FROM users WHERE username = $1',
       [username]
     );
 
@@ -39,7 +39,7 @@ router.post('/login', loginLimiter, async (req, res, next) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, username: user.username, sessionVersion: user.session_version },
+      { id: user.id, username: user.username, role: user.role, fullName: user.full_name },
       config.jwt.secret,
       { expiresIn: config.jwt.expiresIn }
     );
@@ -65,16 +65,15 @@ router.post('/change-password', authenticate, async (req, res, next) => {
       return res.status(400).json({ error: 'New password must be at least 8 characters.' });
     }
 
-    const result = await query('SELECT password_hash FROM users WHERE id = $1 AND is_active = true', [req.user.id]);
+    const result = await query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
     const user = result.rows[0];
-    if (!user) return res.status(401).json({ error: 'User account is not available.' });
     const match = await bcrypt.compare(currentPassword, user.password_hash);
     if (!match) {
       return res.status(401).json({ error: 'Current password is incorrect.' });
     }
 
     const newHash = await bcrypt.hash(newPassword, 10);
-    await query('UPDATE users SET password_hash = $1, session_version = session_version + 1, updated_at = now() WHERE id = $2', [newHash, req.user.id]);
+    await query('UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2', [newHash, req.user.id]);
     res.json({ success: true });
   } catch (err) {
     next(err);

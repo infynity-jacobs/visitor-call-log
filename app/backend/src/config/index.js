@@ -34,5 +34,5 @@ module.exports = {
 
   uploadsDir: process.env.UPLOADS_DIR || './uploads',
 
-  version: process.env.APP_VERSION || '1.0.1'
+  version: process.env.APP_VERSION || '1.0.0'
 };

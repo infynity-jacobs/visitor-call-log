@@ -2,7 +2,7 @@
 # deploy/install_prerequisites.sh
 #
 # Installs all OS-level prerequisites for the Visitor Register & Call Log
-# application on a fresh Ubuntu 22.04 LTS server: Git, Node.js 20 LTS,
+# application on a fresh Ubuntu 22.04 LTS server: Git, rsync, Node.js 20 LTS,
 # PostgreSQL, and Nginx.
 #
 # Usage: sudo ./deploy/install_prerequisites.sh
@@ -44,7 +44,23 @@ if ! command -v psql >/dev/null 2>&1; then
 fi
 systemctl enable postgresql
 systemctl start postgresql
-su - postgres -c "psql -c 'SELECT version();'" || fail "PostgreSQL is not responding after install"
+
+log "Waiting for PostgreSQL to become ready"
+for attempt in {1..30}; do
+  if pg_isready -q; then
+    break
+  fi
+  if [[ "$attempt" -eq 30 ]]; then
+    echo "PostgreSQL status:" >&2
+    systemctl --no-pager --full status postgresql || true
+    echo "Recent PostgreSQL log:" >&2
+    journalctl -u postgresql -n 40 --no-pager || true
+    fail "PostgreSQL did not become ready within 30 seconds"
+  fi
+  sleep 1
+done
+
+su - postgres -c "psql -P pager=off -c 'SELECT version();'" || fail "PostgreSQL is not responding after install"
 
 log "Installing Nginx"
 if ! command -v nginx >/dev/null 2>&1; then
@@ -67,7 +83,7 @@ fi
 log "Prerequisites installed successfully."
 echo "Node:       $(node -v)"
 echo "npm:        $(npm -v)"
-echo "PostgreSQL: $(su - postgres -c 'psql -c "SHOW server_version;" -t' | xargs)"
+echo "PostgreSQL: $(su - postgres -c 'psql -P pager=off -c "SHOW server_version;" -t' | xargs)"
 echo "Nginx:      $(nginx -v 2>&1)"
 echo
 echo "Next step: sudo ./deploy/install.sh"

@@ -1,7 +1,7 @@
 const express = require('express');
 const { authenticate } = require('../middleware/auth');
 const calllogService = require('../services/calllog.service');
-const { requireString, validatePhone, validateDate, validateTime, validatePagination, validateDateFilter } = require('../utils/validators');
+const { requireString, validatePhone, validateDate, validateTime } = require('../utils/validators');
 
 const router = express.Router();
 router.use(authenticate);
@@ -30,11 +30,12 @@ router.post('/', async (req, res, next) => {
 
 router.get('/', async (req, res, next) => {
   try {
-    const { mode = 'all', date, startDate, endDate } = req.query;
-    const filter = validateDateFilter({ mode, date, startDate, endDate }, 'Date');
-    const pageLimit = validatePagination(req.query.limit, 'Limit', { defaultValue: 500, min: 1, max: 1000 });
-    const pageOffset = validatePagination(req.query.offset, 'Offset', { defaultValue: 0, min: 0, max: 100000000 });
-    const records = await calllogService.list({ ...filter, limit: pageLimit, offset: pageOffset });
+    const { mode = 'all', date, startDate, endDate, limit, offset } = req.query;
+    const records = await calllogService.list({
+      mode, date, startDate, endDate,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined
+    });
     res.json({ records });
   } catch (err) {
     next(err);

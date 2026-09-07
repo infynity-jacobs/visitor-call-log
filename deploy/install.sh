@@ -76,7 +76,7 @@ if [[ -f "$ENV_FILE" ]]; then
 else
   JWT_SECRET="$(openssl rand -hex 32)"
   APP_SECRET_KEY="$(openssl rand -hex 32)"
-  APP_VERSION="$(cat "$REPO_ROOT/VERSION" 2>/dev/null || echo '1.0.1')"
+  APP_VERSION="$(cat "$REPO_ROOT/VERSION" 2>/dev/null || echo '1.0.0')"
   CORS_ORIGIN="${DOMAIN:+https://$DOMAIN}"
   CORS_ORIGIN="${CORS_ORIGIN:-*}"
 

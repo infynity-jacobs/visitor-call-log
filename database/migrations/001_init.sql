@@ -19,7 +19,6 @@ CREATE TABLE IF NOT EXISTS users (
     full_name     VARCHAR(255),
     role          VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
     is_active     BOOLEAN NOT NULL DEFAULT true,
-    session_version INTEGER NOT NULL DEFAULT 0,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );

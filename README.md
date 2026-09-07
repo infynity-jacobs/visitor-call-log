@@ -1,17 +1,5 @@
 # Visitor Register & Call Log
 
-## 1.0.1 — Security & bug-fix release
-
-- Invalidates sessions when user password, role, or active status changes.
-- Disabled users are rejected immediately even with an existing JWT.
-- Validates real calendar dates, clock times, pagination, and date filters.
-- Enforces enabled Purpose, Enquiry Type, and Meeting Person options server-side.
-- Fixes the visitor options route ordering bug.
-- Prevents self-deactivation and removal of the last active administrator.
-- Fixes report serial numbers and applies configured report headers.
-- Adds missing `rsync` prerequisite and explicit unit/integration test scripts.
-
-
 A production-ready web application for front-office/reception use: a **Visitor Register**
 with configurable, purpose-driven conditional fields, and a **Call Log** for recording
 incoming/outgoing calls — with Excel/PDF/email reporting, configurable branding, and

@@ -4,7 +4,7 @@ const visitorsService = require('../services/visitors.service');
 const calllogService = require('../services/calllog.service');
 const reportService = require('../services/report.service');
 const emailService = require('../services/email.service');
-const { validateEmail, requireString, validateDateFilter } = require('../utils/validators');
+const { validateEmail, requireString } = require('../utils/validators');
 const { ValidationError } = require('../middleware/errorHandler');
 
 const router = express.Router();
@@ -30,8 +30,7 @@ router.get('/:type/:format', async (req, res, next) => {
   try {
     const { type, format } = req.params;
     const { mode = 'all', date, startDate, endDate } = req.query;
-    const filter = validateDateFilter({ mode, date, startDate, endDate }, 'Date');
-    const { rows, columns } = await loadDataset(type, filter);
+    const { rows, columns } = await loadDataset(type, { mode, date, startDate, endDate });
     const filterLabel = reportService.formatFilterLabel({ mode, date, startDate, endDate });
     const title = titleFor(type);
 
@@ -57,13 +56,11 @@ router.post('/:type/email', async (req, res, next) => {
   try {
     const { type } = req.params;
     const { mode = 'all', date, startDate, endDate, format = 'pdf', to, subject, message } = req.body;
-    const filter = validateDateFilter({ mode, date, startDate, endDate }, 'Date');
-    if (!['pdf', 'xlsx'].includes(format)) throw new ValidationError('Unknown report format. Use "xlsx" or "pdf".');
 
     const recipient = validateEmail(to, 'Recipient email', { optional: false });
     const emailSubject = requireString(subject, 'Subject', { optional: true }) || titleFor(type);
 
-    const { rows, columns } = await loadDataset(type, filter);
+    const { rows, columns } = await loadDataset(type, { mode, date, startDate, endDate });
     const filterLabel = reportService.formatFilterLabel({ mode, date, startDate, endDate });
     const title = titleFor(type);
 

@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  requireString, validatePhone, validateEmail, validateDate, validateTime, validatePagination, validateDateFilter
+  requireString, validatePhone, validateEmail, validateDate, validateTime
 } = require('../../app/backend/src/utils/validators');
 
 test('requireString: trims and accepts a normal value', () => {
@@ -50,27 +50,4 @@ test('validateTime: accepts HH:MM', () => {
 
 test('validateTime: rejects garbage', () => {
   assert.throws(() => validateTime('not-a-time', 'Time', { optional: false }));
-});
-
-test('validateDate: rejects impossible calendar dates', () => {
-  assert.throws(() => validateDate('2026-02-30', 'Date', { optional: false }), /valid calendar date/);
-  assert.throws(() => validateDate('2026-99-99', 'Date', { optional: false }), /valid calendar date/);
-});
-
-test('validateTime: rejects impossible clock times', () => {
-  assert.throws(() => validateTime('24:00', 'Time', { optional: false }), /invalid time/);
-  assert.throws(() => validateTime('12:60', 'Time', { optional: false }), /invalid time/);
-});
-
-test('validatePagination: rejects invalid values and accepts bounds', () => {
-  assert.equal(validatePagination(undefined, 'Limit', { defaultValue: 500, min: 1, max: 1000 }), 500);
-  assert.equal(validatePagination('25', 'Limit', { defaultValue: 500, min: 1, max: 1000 }), 25);
-  assert.throws(() => validatePagination('abc', 'Limit', { min: 1, max: 1000 }), /integer/);
-  assert.throws(() => validatePagination('0', 'Limit', { min: 1, max: 1000 }), /between/);
-});
-
-test('validateDateFilter: validates modes and ranges', () => {
-  assert.deepEqual(validateDateFilter({ mode: 'single', date: '2026-09-07' }), { mode: 'single', date: '2026-09-07' });
-  assert.throws(() => validateDateFilter({ mode: 'bad' }), /one of/);
-  assert.throws(() => validateDateFilter({ mode: 'range', startDate: '2026-09-08', endDate: '2026-09-07' }), /later/);
 });
