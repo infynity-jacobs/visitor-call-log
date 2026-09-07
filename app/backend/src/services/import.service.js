@@ -152,10 +152,17 @@ function validate(type, r) {
   const date = type === 'visitors' ? r.visitDate : r.callDate;
   const time = type === 'visitors' ? r.visitTime : r.callTime;
   if (!r.name) errors.push('Name is required');
+  if (r.name && r.name.length > 255) errors.push('Name exceeds 255 characters');
+  if (r.place && r.place.length > 255) errors.push('Place exceeds 255 characters');
+  if (r.phone && r.phone.length > 100) errors.push('Phone exceeds 100 characters');
   if (!date) errors.push('Date is required'); else if (!validateDate(date)) errors.push('Invalid date');
   if (!time) errors.push('Time is required'); else if (!validateTime(time)) errors.push('Invalid time');
   if (type === 'visitors') {
     if (!r.purpose) errors.push('Purpose is required');
+    if (r.purpose && r.purpose.length > 100) errors.push('Purpose exceeds 100 characters');
+    if (r.enquiryType && r.enquiryType.length > 100) errors.push('Enquiry Type exceeds 100 characters');
+    if (r.personToVisit && r.personToVisit.length > 100) errors.push('Person to Visit exceeds 100 characters');
+    if (r.personToVisitOther && r.personToVisitOther.length > 255) errors.push('Person to Visit (Other) exceeds 255 characters');
   } else {
     if (!r.place) errors.push('Place is required');
     if (!r.phone) errors.push('Phone is required');

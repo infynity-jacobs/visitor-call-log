@@ -1,3 +1,9 @@
+## v1.2.5
+
+- Fixed historical Excel import failure caused by legacy phone values longer than 30 characters. Phone columns now support up to 100 characters.
+- Import validation now checks database field length limits before commit, so oversized values are reported during preview instead of failing with a PostgreSQL error.
+- Preserved global search on both Visitor Register and Call Log.
+
 # Changelog
 
 ## 1.2.3

@@ -1,6 +1,6 @@
 {
   "name": "visitor-call-log-backend",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Backend API for the Visitor Register & Call Log application",
   "main": "src/server.js",
   "type": "commonjs",
