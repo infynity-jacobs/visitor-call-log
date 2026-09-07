@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.7 - 2026-09-07
+
+### Branding sizing refinement
+- Login page organization logo renders at up to **300px wide**, matching the approved design.
+- Authenticated application header organization logo renders at **150px wide** with preserved aspect ratio.
+- PDF printed reports render the organization logo at a matching **150px-equivalent visual width** (112.5 PDF points at 96 CSS px/in) with preserved aspect ratio.
+- Login card width was increased to accommodate the larger logo while remaining responsive on mobile.
+- No database migration is required.
+
+
 ## 1.2.6 - 2026-09-07
 - Added public branding endpoint for the login page, exposing only organization name and logo.
 - Added branded login page using the existing Branding settings.
