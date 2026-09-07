@@ -1,3 +1,5 @@
+# Changelog
+
 ## 1.2.3
 - Moved Visitor Register and Call Log module switching into the main header as distinct, color-coded buttons.
 - Applied configured organization branding (logo and organization name) directly to the main navigation header.
@@ -5,7 +7,10 @@
 - Kept the same header/module navigation consistently visible when switching between Visitor Register and Call Log.
 - Fixed the Super Administrator middleware export so the production server can start with the permanent-record deletion routes enabled.
 
-# Changelog
+## 1.2.4
+- Added Global Search to the Call Log page; search remains global across both modules.
+- Completed the Super Administrator historical Excel import workflow with first-sheet/header validation, full-row validation before commit, duplicate workbook protection, import history, and clearer preview/confirmation UI.
+- Fixed the JSON upload limit to account for base64 overhead while retaining an 8 MB raw Excel-file limit.
 
 ## 1.2.2
 - Rebuilt npm lockfiles from the known-good v1.0.5 dependency tree; no application dependency changes.

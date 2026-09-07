@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { useSearchParams } from 'react-router-dom';
 import { formatIstDateTime } from '../utils/timezone';
 import { useAuth } from '../context/AuthContext.jsx';
+import { GlobalSearch } from '../components/GlobalSearch.jsx';
 
 const EMPTY_FORM = { name: '', place: '', phone: '', reason: '' };
 
@@ -73,6 +74,7 @@ export default function CallLog() {
   return (
     <div>
       <h2>CALL LOG</h2>
+      <GlobalSearch />
       {selectedRecord && (
         <div className="card selected-record">
           <div className="section-heading"><h3 style={{ margin: 0 }}>Call Log Record #{selectedRecord.id}</h3><button className="secondary" onClick={closeSelected}>Close</button></div>

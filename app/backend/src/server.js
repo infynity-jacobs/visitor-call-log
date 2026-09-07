@@ -20,7 +20,8 @@ const app = express();
 
 app.use(helmet());
 app.use(cors({ origin: config.corsOrigin }));
-app.use(express.json({ limit: '8mb' }));
+// JSON carries Excel files as base64; allow overhead while keeping the raw-file limit at 8 MB in the import route.
+app.use(express.json({ limit: '12mb' }));
 app.use(morgan(config.env === 'production' ? 'combined' : 'dev'));
 
 app.get('/api/health', async (req, res) => {

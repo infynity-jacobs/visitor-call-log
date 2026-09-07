@@ -156,7 +156,7 @@ This release adds on-screen IST date filtering for Visitor Register and Call Log
 
 ## v1.2.0 additions
 - Super Administrator role for destructive record deletion and historical Excel import.
-- Historical Excel import accepts the first worksheet and treats source date/time values as Asia/Kolkata (IST).
-- Import supports VISITORS REGISTER.xlsx and Call Log.xlsx layouts and provides preview/validation before commit.
+- Historical Excel import accepts the first worksheet, validates its expected columns and all data rows, and treats source date/time values as Asia/Kolkata (IST).
+- Import supports the supplied VISITORS REGISTER.xlsx and Call Log.xlsx layouts, preserves source S.No./raw rows, blocks invalid imports, prevents exact workbook re-imports, and provides import history under Settings for Super Administrators.
 - PDF report branding uses a compact inline logo/header layout.
 - Main page distinguishes VISITOR REGISTER and CALL LOG with separate color schemes.
