@@ -53,3 +53,25 @@ The script backs up the database *before* making any changes, so:
   changes the schema.
 - The update never overwrites an existing `app/backend/.env` — your secrets and
   configuration persist across updates.
+
+
+## Git-based production deployment
+
+The production application is deployed from a Git working copy, typically `/home/administrator/visitor-call-log`, into `/opt/visitor-call-log`. The production directory itself does not need to be a Git checkout.
+
+Run from the Git checkout:
+
+```bash
+cd /home/administrator/visitor-call-log
+sudo ./deploy/update.sh
+```
+
+To deploy a specific tag/commit:
+
+```bash
+sudo ./deploy/update.sh <git-ref>
+```
+
+The update process fetches the repository, verifies a clean working tree, creates a PostgreSQL backup, stages and builds the release outside the production directory, preserves `app/backend/.env`, deploys the code, runs pending migrations, restarts the service, and verifies `/api/health`. A rollback copy of the previous application code is retained under `/var/backups/visitor-call-log/releases/`.
+
+Do not run the update script from `/opt/visitor-call-log`; run it from the Git checkout.
