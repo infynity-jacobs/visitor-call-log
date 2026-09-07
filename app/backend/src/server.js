@@ -12,6 +12,7 @@ const visitorsRoutes = require('./routes/visitors.routes');
 const calllogRoutes = require('./routes/calllog.routes');
 const settingsRoutes = require('./routes/settings.routes');
 const reportsRoutes = require('./routes/reports.routes');
+const searchRoutes = require('./routes/search.routes');
 const buildOptionsRouter = require('./routes/optionsFactory');
 
 const app = express();
@@ -35,6 +36,7 @@ app.use('/api/visitors', visitorsRoutes);
 app.use('/api/calllog', calllogRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/search', searchRoutes);
 app.use('/api/settings/purpose-options', buildOptionsRouter('purpose_options'));
 app.use('/api/settings/enquiry-type-options', buildOptionsRouter('enquiry_type_options'));
 app.use('/api/settings/meeting-person-options', buildOptionsRouter('meeting_person_options'));

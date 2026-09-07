@@ -1,5 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api/client';
+import { useSearchParams } from 'react-router-dom';
+import { GlobalSearch } from '../components/GlobalSearch.jsx';
+import { formatIstDateTime } from '../utils/timezone';
 
 const EMPTY_FORM = {
   name: '', place: '', phone: '', purpose: '',
@@ -19,14 +22,22 @@ export default function VisitorRegister() {
   const [message, setMessage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [recent, setRecent] = useState([]);
+  const [mode, setMode] = useState('all');
+  const [date, setDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [filterMessage, setFilterMessage] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   const loadOptions = useCallback(async () => {
     const data = await api.request('/visitors/options/all');
     setOptions(data);
   }, []);
 
-  const loadRecent = useCallback(async () => {
-    const data = await api.request('/visitors?mode=all&limit=8');
+  const loadRecent = useCallback(async (filter = { mode: 'all' }) => {
+    const params = new URLSearchParams({ ...filter, limit: '500', offset: '0' });
+    const data = await api.request(`/visitors?${params.toString()}`);
     setRecent(data.records);
   }, []);
 
@@ -34,6 +45,27 @@ export default function VisitorRegister() {
     loadOptions().catch((err) => setMessage({ type: 'error', text: err.message }));
     loadRecent().catch(() => {});
   }, [loadOptions, loadRecent]);
+
+  useEffect(() => {
+    const id = searchParams.get('record');
+    if (!id) { setSelectedRecord(null); return; }
+    api.request(`/visitors/${id}`).then((data) => setSelectedRecord(data.record)).catch((err) => setMessage({ type: 'error', text: err.message }));
+  }, [searchParams]);
+
+  async function applyFilter() {
+    try {
+      setFilterMessage(null);
+      const filter = mode === 'single' ? { mode, date } : mode === 'range' ? { mode, startDate, endDate } : { mode: 'all' };
+      await loadRecent(filter);
+    } catch (err) { setFilterMessage({ type: 'error', text: err.message }); }
+  }
+
+  async function clearFilter() {
+    setMode('all'); setDate(''); setStartDate(''); setEndDate(''); setFilterMessage(null);
+    try { await loadRecent({ mode: 'all' }); } catch (err) { setFilterMessage({ type: 'error', text: err.message }); }
+  }
+
+  function closeSelected() { setSelectedRecord(null); setSearchParams({}); }
 
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -74,6 +106,20 @@ export default function VisitorRegister() {
   return (
     <div>
       <h2>Visitor Register</h2>
+      <GlobalSearch />
+      {selectedRecord && (
+        <div className="card selected-record">
+          <div className="section-heading"><h3 style={{ margin: 0 }}>Visitor Record #{selectedRecord.id}</h3><button className="secondary" onClick={closeSelected}>Close</button></div>
+          <div className="record-grid">
+            <div><strong>Date &amp; Time (IST)</strong><span>{formatIstDateTime(selectedRecord.visit_date, selectedRecord.visit_time)}</span></div>
+            <div><strong>Name</strong><span>{selectedRecord.name}</span></div>
+            <div><strong>Place</strong><span>{selectedRecord.place || '—'}</span></div>
+            <div><strong>Phone</strong><span>{selectedRecord.phone || '—'}</span></div>
+            <div><strong>Purpose</strong><span>{selectedRecord.purpose}</span></div>
+            <div><strong>Enquiry Type</strong><span>{selectedRecord.enquiry_type || '—'}</span></div>
+          </div>
+        </div>
+      )}
       {message && <div className={`alert ${message.type}`}>{message.text}</div>}
 
       <div className="card">
@@ -192,7 +238,20 @@ export default function VisitorRegister() {
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Recent entries</h3>
+        <h3 style={{ marginTop: 0 }}>Filter records</h3>
+        <div className="tabs">
+          <button className={mode === 'all' ? 'active' : ''} onClick={() => setMode('all')}>All records</button>
+          <button className={mode === 'single' ? 'active' : ''} onClick={() => setMode('single')}>Specific date</button>
+          <button className={mode === 'range' ? 'active' : ''} onClick={() => setMode('range')}>Date range</button>
+        </div>
+        {mode === 'single' && <div style={{ maxWidth: 240 }}><label>Date</label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>}
+        {mode === 'range' && <div className="form-grid"><div><label>From date</label><input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></div><div><label>To date</label><input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></div></div>}
+        {filterMessage && <div className={`alert ${filterMessage.type}`} style={{ marginTop: '0.8rem' }}>{filterMessage.text}</div>}
+        <div className="actions"><button className="primary" onClick={applyFilter}>Apply filter</button><button className="secondary" onClick={clearFilter}>Clear filter</button></div>
+      </div>
+
+      <div className="card">
+        <div className="section-heading"><h3 style={{ marginTop: 0, marginBottom: 0 }}>Recent entries</h3><span className="muted">{recent.length} record{recent.length === 1 ? '' : 's'}</span></div>
         <table>
           <thead>
             <tr><th>S.No.</th><th>Date</th><th>Time</th><th>Name</th><th>Place</th><th>Phone</th><th>Purpose</th></tr>
@@ -200,9 +259,9 @@ export default function VisitorRegister() {
           <tbody>
             {recent.map((r) => (
               <tr key={r.id}>
-                <td>{recent.indexOf(r) + 1}</td>
-                <td>{String(r.visit_date).slice(0, 10)}</td>
-                <td>{String(r.visit_time).slice(0, 8)}</td>
+                <td>{r.id}</td>
+                <td>{formatIstDateTime(r.visit_date, r.visit_time).slice(0, 10)}</td>
+                <td>{formatIstDateTime(r.visit_date, r.visit_time).slice(-8)}</td>
                 <td>{r.name}</td>
                 <td>{r.place}</td>
                 <td>{r.phone}</td>

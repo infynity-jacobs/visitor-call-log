@@ -66,3 +66,12 @@ the current date/time, the Save button clears the form immediately after a succe
 save so the next visitor can be entered right away, and duplicate accidental
 double-submissions (e.g. a double-click) are automatically detected and treated as a
 single save rather than creating two records.
+
+
+### User Management
+
+Administrators can add users and manage existing users with **Edit**, **Enable/Disable**, and **Delete** actions. Edit supports username, full name, password, role, and active status. Deletion requires confirmation and preserves historical business records. The system prevents deleting the current administrator account and prevents removal/deactivation of the last active administrator.
+
+### Global Search
+
+The Visitor Register main page includes Global Search across the complete Visitor Register and Call Log history. Search is case-insensitive and supports partial matches across relevant text fields and IST record dates. Selecting a result opens the corresponding record in its module.

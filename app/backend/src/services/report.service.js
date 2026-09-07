@@ -1,6 +1,7 @@
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const { query } = require('../db/pool');
+const { formatIstDateTime } = require('../utils/timezone');
 
 async function getBranding() {
   const result = await query('SELECT * FROM branding_settings WHERE id = 1');
@@ -69,7 +70,7 @@ async function generateExcel({ title, columns, rows, filterLabel }) {
   sheet.getCell('A3').font = { size: 13, bold: true };
 
   sheet.mergeCells(`A4:${endLetter}4`);
-  sheet.getCell('A4').value = `${title} — ${filterLabel} | Generated: ${new Date().toLocaleString()}`;
+  sheet.getCell('A4').value = `${title} — ${filterLabel} | Generated (IST): ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false })}`;
   sheet.getCell('A4').font = { size: 9, italic: true };
 
   sheet.getRow(5).values = columns.map((c) => c.header);
@@ -81,7 +82,12 @@ async function generateExcel({ title, columns, rows, filterLabel }) {
   columns.forEach((c, i) => { sheet.getColumn(i + 1).width = c.width; });
 
   rows.forEach((row, index) => {
-    sheet.addRow(columns.map((c) => c.key === 'report_sno' ? index + 1 : (row[c.key] ?? '')));
+    sheet.addRow(columns.map((c) => {
+      if (c.key === 'report_sno') return index + 1;
+      if (c.key === 'visit_date' || c.key === 'visit_time') return formatIstDateTime(row.visit_date, row.visit_time).slice(c.key === 'visit_date' ? 0 : 11, c.key === 'visit_date' ? 10 : 19);
+      if (c.key === 'call_date' || c.key === 'call_time') return formatIstDateTime(row.call_date, row.call_time).slice(c.key === 'call_date' ? 0 : 11, c.key === 'call_date' ? 10 : 19);
+      return row[c.key] ?? '';
+    }));
   });
 
   if (branding.report_footer) {
@@ -114,7 +120,7 @@ async function generatePdf({ title, columns, rows, filterLabel }) {
   doc.fontSize(13).font('Helvetica-Bold').text(branding.report_header || title, { align: 'center' });
   doc.fontSize(10).font('Helvetica-Bold').text(`${title} — ${filterLabel}`, { align: 'center' });
   doc.fontSize(8).font('Helvetica').fillColor('#666666')
-    .text(`Generated: ${new Date().toLocaleString()}`, { align: 'center' });
+    .text(`Generated (IST): ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false })}`, { align: 'center' });
   doc.fillColor('#000000');
   doc.moveDown(1);
 
@@ -145,7 +151,12 @@ async function generatePdf({ title, columns, rows, filterLabel }) {
   rows.forEach((row, index) => {
     row.report_sno = index + 1;
     ensureSpace();
-    drawRow(columns.map((c) => c.key === 'report_sno' ? row.report_sno : (row[c.key] ?? '')));
+    drawRow(columns.map((c) => {
+      if (c.key === 'report_sno') return row.report_sno;
+      if (c.key === 'visit_date' || c.key === 'visit_time') { const v = formatIstDateTime(row.visit_date, row.visit_time); return c.key === 'visit_date' ? v.slice(0, 10) : v.slice(11, 19); }
+      if (c.key === 'call_date' || c.key === 'call_time') { const v = formatIstDateTime(row.call_date, row.call_time); return c.key === 'call_date' ? v.slice(0, 10) : v.slice(11, 19); }
+      return row[c.key] ?? '';
+    }));
   });
 
   // Page numbers and footer on every page.

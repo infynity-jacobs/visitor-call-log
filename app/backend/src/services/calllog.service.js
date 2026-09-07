@@ -1,4 +1,5 @@
 const { query } = require('../db/pool');
+const { utcBoundsForIstDate, nextIstDate } = require('../utils/timezone');
 
 const COLUMNS = 'id, call_date, call_time, name, place, phone, reason, created_at';
 
@@ -6,11 +7,17 @@ function buildDateFilter({ mode, date, startDate, endDate }, paramOffset = 1) {
   const params = [];
   let clause = '';
   if (mode === 'single' && date) {
-    clause = `WHERE call_date = $${paramOffset}`;
-    params.push(date);
+    clause = `WHERE (call_date + call_time) >= ($${paramOffset}::timestamp)
+              AND (call_date + call_time) < ($${paramOffset + 1}::timestamp)`;
+    const start = utcBoundsForIstDate(date);
+    const end = utcBoundsForIstDate(nextIstDate(date));
+    params.push(`${start.date} ${start.time}`, `${end.date} ${end.time}`);
   } else if (mode === 'range' && startDate && endDate) {
-    clause = `WHERE call_date BETWEEN $${paramOffset} AND $${paramOffset + 1}`;
-    params.push(startDate, endDate);
+    clause = `WHERE (call_date + call_time) >= ($${paramOffset}::timestamp)
+              AND (call_date + call_time) < ($${paramOffset + 1}::timestamp)`;
+    const start = utcBoundsForIstDate(startDate);
+    const end = utcBoundsForIstDate(nextIstDate(endDate));
+    params.push(`${start.date} ${start.time}`, `${end.date} ${end.time}`);
   }
   return { clause, params };
 }
@@ -18,7 +25,8 @@ function buildDateFilter({ mode, date, startDate, endDate }, paramOffset = 1) {
 async function create(data) {
   const sql = `
     INSERT INTO call_logs (call_date, call_time, name, place, phone, reason, created_by, idempotency_key)
-    VALUES (COALESCE($1, CURRENT_DATE), COALESCE($2, CURRENT_TIME), $3, $4, $5, $6, $7, $8)
+    VALUES (COALESCE($1::date, (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date),
+            COALESCE($2::time, (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::time), $3, $4, $5, $6, $7, $8)
     ON CONFLICT (idempotency_key) DO NOTHING
     RETURNING ${COLUMNS}
   `;
@@ -48,4 +56,9 @@ async function list({ mode = 'all', date, startDate, endDate, limit = 500, offse
   return result.rows;
 }
 
-module.exports = { create, list, buildDateFilter };
+async function getById(id) {
+  const result = await query(`SELECT ${COLUMNS} FROM call_logs WHERE id = $1`, [id]);
+  return result.rows[0] || null;
+}
+
+module.exports = { create, list, getById, buildDateFilter };

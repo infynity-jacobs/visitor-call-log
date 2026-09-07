@@ -7,19 +7,25 @@ const COLUMNS = `
   donation_details, other_details, created_at
 `;
 
-/**
- * Build a WHERE clause + params for date filtering.
- * mode: 'all' | 'single' | 'range'
- */
 function buildDateFilter({ mode, date, startDate, endDate }, paramOffset = 1) {
   const params = [];
   let clause = '';
+  // Database date/time values are stored as UTC clock values. Convert the
+  // requested IST calendar day/range into UTC bounds before querying.
   if (mode === 'single' && date) {
-    clause = `WHERE visit_date = $${paramOffset}`;
-    params.push(date);
+    clause = `WHERE (visit_date + visit_time) >= ($${paramOffset}::timestamp)
+              AND (visit_date + visit_time) < ($${paramOffset + 1}::timestamp)`;
+    const { utcBoundsForIstDate, nextIstDate } = require('../utils/timezone');
+    const start = utcBoundsForIstDate(date);
+    const end = utcBoundsForIstDate(nextIstDate(date));
+    params.push(`${start.date} ${start.time}`, `${end.date} ${end.time}`);
   } else if (mode === 'range' && startDate && endDate) {
-    clause = `WHERE visit_date BETWEEN $${paramOffset} AND $${paramOffset + 1}`;
-    params.push(startDate, endDate);
+    clause = `WHERE (visit_date + visit_time) >= ($${paramOffset}::timestamp)
+              AND (visit_date + visit_time) < ($${paramOffset + 1}::timestamp)`;
+    const { utcBoundsForIstDate, nextIstDate } = require('../utils/timezone');
+    const start = utcBoundsForIstDate(startDate);
+    const end = utcBoundsForIstDate(nextIstDate(endDate));
+    params.push(`${start.date} ${start.time}`, `${end.date} ${end.time}`);
   }
   return { clause, params };
 }
@@ -32,7 +38,8 @@ async function create(data) {
       person_to_visit, person_to_visit_other, interview_details,
       donation_details, other_details, created_by, idempotency_key
     ) VALUES (
-      COALESCE($1, CURRENT_DATE), COALESCE($2, CURRENT_TIME), $3, $4, $5, $6, $7,
+      COALESCE($1::date, (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date),
+      COALESCE($2::time, (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::time), $3, $4, $5, $6, $7,
       $8, $9, $10, $11,
       $12, $13, $14,
       $15, $16, $17, $18
@@ -49,7 +56,6 @@ async function create(data) {
   ];
   const result = await query(sql, params);
   if (result.rows.length === 0 && data.idempotencyKey) {
-    // Duplicate submission: return the existing record instead of erroring.
     const existing = await query(`SELECT ${COLUMNS} FROM visitors WHERE idempotency_key = $1`, [data.idempotencyKey]);
     return { record: existing.rows[0], duplicate: true };
   }

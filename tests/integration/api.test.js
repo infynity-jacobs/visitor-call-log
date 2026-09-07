@@ -174,7 +174,7 @@ test('creating a call log entry succeeds', async () => {
   const res = await fetch(`${BASE_URL}/api/calllog`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ name: 'Test Caller', phone: '5559998888', reason: 'Integration test call' })
+    body: JSON.stringify({ name: 'Test Caller', place: 'Test City', phone: '5559998888', reason: 'Integration test call' })
   });
   assert.equal(res.status, 201);
   const data = await res.json();
@@ -229,4 +229,71 @@ test('branding settings can be read and updated by an admin', async () => {
   const getRes = await fetch(`${BASE_URL}/api/settings/branding`, { headers: authHeaders() });
   const fetched = await getRes.json();
   assert.equal(fetched.branding.org_name, 'Integration Test Org');
+});
+
+
+test('call log requires place and phone', async () => {
+  const missingPlace = await fetch(`${BASE_URL}/api/calllog`, {
+    method: 'POST', headers: authHeaders(),
+    body: JSON.stringify({ name: 'Required Field Test', phone: '5551234567', reason: 'Test' })
+  });
+  assert.equal(missingPlace.status, 400);
+  const missingPhone = await fetch(`${BASE_URL}/api/calllog`, {
+    method: 'POST', headers: authHeaders(),
+    body: JSON.stringify({ name: 'Required Field Test', place: 'Test City', reason: 'Test' })
+  });
+  assert.equal(missingPhone.status, 400);
+});
+
+test('global search returns visitor and call log matches', async () => {
+  const visitor = await fetch(`${BASE_URL}/api/search?q=Integration%20Test%20Visitor`, { headers: authHeaders() });
+  assert.equal(visitor.status, 200);
+  const visitorData = await visitor.json();
+  assert.ok(visitorData.results.some((r) => r.type === 'visitor'));
+
+  const call = await fetch(`${BASE_URL}/api/search?q=Integration%20test%20call`, { headers: authHeaders() });
+  assert.equal(call.status, 200);
+  const callData = await call.json();
+  assert.ok(callData.results.some((r) => r.type === 'calllog'));
+});
+
+test('user delete preserves historical visitor and call log records', async () => {
+  const username = `deleteuser${Date.now()}`;
+  const createUserRes = await fetch(`${BASE_URL}/api/settings/users`, {
+    method: 'POST', headers: authHeaders(),
+    body: JSON.stringify({ username, password: 'password123', fullName: 'Delete User', role: 'user' })
+  });
+  assert.equal(createUserRes.status, 201);
+  const user = (await createUserRes.json()).user;
+
+  const loginRes = await fetch(`${BASE_URL}/api/auth/login`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password: 'password123' })
+  });
+  assert.equal(loginRes.status, 200);
+  const userToken = (await loginRes.json()).token;
+  const userHeaders = { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' };
+
+  const visitorRes = await fetch(`${BASE_URL}/api/visitors`, {
+    method: 'POST', headers: userHeaders,
+    body: JSON.stringify({ name: 'Delete User Visitor', purpose: 'Other', otherDetails: 'Delete test', idempotencyKey: `del-v-${Date.now()}` })
+  });
+  assert.equal(visitorRes.status, 201);
+
+  const callRes = await fetch(`${BASE_URL}/api/calllog`, {
+    method: 'POST', headers: userHeaders,
+    body: JSON.stringify({ name: 'Delete User Caller', place: 'Test City', phone: '5551112222', reason: 'Delete test', idempotencyKey: `del-c-${Date.now()}` })
+  });
+  assert.equal(callRes.status, 201);
+
+  const deleteRes = await fetch(`${BASE_URL}/api/settings/users/${user.id}`, { method: 'DELETE', headers: authHeaders() });
+  assert.equal(deleteRes.status, 200);
+
+  const listRes = await fetch(`${BASE_URL}/api/visitors?mode=all&limit=500`, { headers: authHeaders() });
+  const list = await listRes.json();
+  assert.ok(list.records.some((r) => r.name === 'Delete User Visitor'));
+
+  const callsRes = await fetch(`${BASE_URL}/api/calllog?mode=all&limit=500`, { headers: authHeaders() });
+  const calls = await callsRes.json();
+  assert.ok(calls.records.some((r) => r.name === 'Delete User Caller'));
 });

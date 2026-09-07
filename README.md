@@ -147,3 +147,8 @@ update.
   hardened systemd unit (`ProtectSystem=strict`, `NoNewPrivileges=true`, etc.).
 - Settings pages (branding, SMTP, user management, dropdown option management) require
   the Administrator role; the API enforces this independently of the frontend.
+
+
+## v1.1.0 feature release
+
+This release adds on-screen IST date filtering for Visitor Register and Call Log, global historical search, IST display/report timestamps, required Call Log Place/Phone validation, and complete administrator user management (edit, enable/disable, delete). User deletion preserves historical records by setting their `created_by` reference to NULL.

@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api/client';
+import { useSearchParams } from 'react-router-dom';
+import { formatIstDateTime } from '../utils/timezone';
 
 const EMPTY_FORM = { name: '', place: '', phone: '', reason: '' };
 
@@ -13,13 +15,42 @@ export default function CallLog() {
   const [message, setMessage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [recent, setRecent] = useState([]);
+  const [mode, setMode] = useState('all');
+  const [date, setDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [filterMessage, setFilterMessage] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
-  const loadRecent = useCallback(async () => {
-    const data = await api.request('/calllog?mode=all&limit=8');
+  const loadRecent = useCallback(async (filter = { mode: 'all' }) => {
+    const params = new URLSearchParams({ ...filter, limit: '500', offset: '0' });
+    const data = await api.request(`/calllog?${params.toString()}`);
     setRecent(data.records);
   }, []);
 
   useEffect(() => { loadRecent().catch(() => {}); }, [loadRecent]);
+
+  useEffect(() => {
+    const id = searchParams.get('record');
+    if (!id) { setSelectedRecord(null); return; }
+    api.request(`/calllog/${id}`).then((data) => setSelectedRecord(data.record)).catch((err) => setFilterMessage({ type: 'error', text: err.message }));
+  }, [searchParams]);
+
+  async function applyFilter() {
+    try {
+      setFilterMessage(null);
+      const filter = mode === 'single' ? { mode, date } : mode === 'range' ? { mode, startDate, endDate } : { mode: 'all' };
+      await loadRecent(filter);
+    } catch (err) { setFilterMessage({ type: 'error', text: err.message }); }
+  }
+
+  async function clearFilter() {
+    setMode('all'); setDate(''); setStartDate(''); setEndDate(''); setFilterMessage(null);
+    try { await loadRecent({ mode: 'all' }); } catch (err) { setFilterMessage({ type: 'error', text: err.message }); }
+  }
+
+  function closeSelected() { setSelectedRecord(null); setSearchParams({}); }
 
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -53,6 +84,18 @@ export default function CallLog() {
   return (
     <div>
       <h2>Call Log</h2>
+      {selectedRecord && (
+        <div className="card selected-record">
+          <div className="section-heading"><h3 style={{ margin: 0 }}>Call Log Record #{selectedRecord.id}</h3><button className="secondary" onClick={closeSelected}>Close</button></div>
+          <div className="record-grid">
+            <div><strong>Date &amp; Time (IST)</strong><span>{formatIstDateTime(selectedRecord.call_date, selectedRecord.call_time)}</span></div>
+            <div><strong>Name</strong><span>{selectedRecord.name}</span></div>
+            <div><strong>Place</strong><span>{selectedRecord.place || '—'}</span></div>
+            <div><strong>Phone</strong><span>{selectedRecord.phone || '—'}</span></div>
+            <div style={{ gridColumn: '1 / -1' }}><strong>Reason</strong><span>{selectedRecord.reason}</span></div>
+          </div>
+        </div>
+      )}
       {message && <div className={`alert ${message.type}`}>{message.text}</div>}
 
       <div className="card">
@@ -63,12 +106,12 @@ export default function CallLog() {
               <input id="name" value={form.name} onChange={(e) => update('name', e.target.value)} required autoFocus />
             </div>
             <div>
-              <label htmlFor="place">Place</label>
-              <input id="place" value={form.place} onChange={(e) => update('place', e.target.value)} />
+              <label htmlFor="place">Place *</label>
+              <input id="place" value={form.place} onChange={(e) => update('place', e.target.value)} required />
             </div>
             <div>
-              <label htmlFor="phone">Phone</label>
-              <input id="phone" value={form.phone} onChange={(e) => update('phone', e.target.value)} />
+              <label htmlFor="phone">Phone *</label>
+              <input id="phone" type="tel" inputMode="tel" value={form.phone} onChange={(e) => update('phone', e.target.value)} required pattern="[+()\- \d]{6,20}" title="Enter a valid phone number." />
             </div>
           </div>
           <div style={{ marginTop: '0.9rem' }}>
@@ -85,15 +128,24 @@ export default function CallLog() {
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Recent entries</h3>
+        <h3 style={{ marginTop: 0 }}>Filter records</h3>
+        <div className="tabs"><button className={mode === 'all' ? 'active' : ''} onClick={() => setMode('all')}>All records</button><button className={mode === 'single' ? 'active' : ''} onClick={() => setMode('single')}>Specific date</button><button className={mode === 'range' ? 'active' : ''} onClick={() => setMode('range')}>Date range</button></div>
+        {mode === 'single' && <div style={{ maxWidth: 240 }}><label>Date</label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>}
+        {mode === 'range' && <div className="form-grid"><div><label>From date</label><input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></div><div><label>To date</label><input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></div></div>}
+        {filterMessage && <div className={`alert ${filterMessage.type}`} style={{ marginTop: '0.8rem' }}>{filterMessage.text}</div>}
+        <div className="actions"><button className="primary" onClick={applyFilter}>Apply filter</button><button className="secondary" onClick={clearFilter}>Clear filter</button></div>
+      </div>
+
+      <div className="card">
+        <div className="section-heading"><h3 style={{ marginTop: 0, marginBottom: 0 }}>Recent entries</h3><span className="muted">{recent.length} record{recent.length === 1 ? '' : 's'}</span></div>
         <table>
           <thead><tr><th>S.No.</th><th>Date</th><th>Time</th><th>Name</th><th>Place</th><th>Phone</th><th>Reason</th></tr></thead>
           <tbody>
             {recent.map((r) => (
               <tr key={r.id}>
                 <td>{r.id}</td>
-                <td>{String(r.call_date).slice(0, 10)}</td>
-                <td>{String(r.call_time).slice(0, 8)}</td>
+                <td>{formatIstDateTime(r.call_date, r.call_time).slice(0, 10)}</td>
+                <td>{formatIstDateTime(r.call_date, r.call_time).slice(-8)}</td>
                 <td>{r.name}</td>
                 <td>{r.place}</td>
                 <td>{r.phone}</td>

@@ -155,8 +155,12 @@ function SmtpSection() {
 
 function UsersSection() {
   const [users, setUsers] = useState([]);
-  const [form, setForm] = useState({ username: '', password: '', fullName: '', role: 'user' });
+  const emptyAdd = { username: '', password: '', fullName: '', role: 'user' };
+  const [form, setForm] = useState(emptyAdd);
+  const [editing, setEditing] = useState(null);
+  const [editForm, setEditForm] = useState({ username: '', fullName: '', password: '', role: 'user', isActive: true });
   const [message, setMessage] = useState(null);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     const data = await api.request('/settings/users');
@@ -166,56 +170,104 @@ function UsersSection() {
   useEffect(() => { load().catch((err) => setMessage({ type: 'error', text: err.message })); }, [load]);
 
   async function handleCreate(e) {
-    e.preventDefault();
+    e.preventDefault(); setBusy(true); setMessage(null);
     try {
       await api.request('/settings/users', { method: 'POST', body: form });
-      setForm({ username: '', password: '', fullName: '', role: 'user' });
+      setForm(emptyAdd);
       setMessage({ type: 'success', text: 'User created.' });
-      load();
-    } catch (err) {
-      setMessage({ type: 'error', text: err.message });
-    }
+      await load();
+    } catch (err) { setMessage({ type: 'error', text: err.message }); }
+    finally { setBusy(false); }
+  }
+
+  function beginEdit(u) {
+    setEditing(u.id);
+    setEditForm({ username: u.username, fullName: u.full_name || '', password: '', role: u.role, isActive: u.is_active });
+    setMessage(null);
+  }
+
+  function cancelEdit() { setEditing(null); }
+
+  async function handleEdit(e) {
+    e.preventDefault(); setBusy(true); setMessage(null);
+    try {
+      const body = { username: editForm.username, fullName: editForm.fullName, role: editForm.role, isActive: editForm.isActive };
+      if (editForm.password) body.password = editForm.password;
+      await api.request(`/settings/users/${editing}`, { method: 'PUT', body });
+      setEditing(null);
+      setMessage({ type: 'success', text: 'User updated.' });
+      await load();
+    } catch (err) { setMessage({ type: 'error', text: err.message }); }
+    finally { setBusy(false); }
   }
 
   async function handleToggleActive(u) {
+    setBusy(true); setMessage(null);
     try {
       await api.request(`/settings/users/${u.id}`, { method: 'PUT', body: { isActive: !u.is_active } });
-      load();
-    } catch (err) {
-      setMessage({ type: 'error', text: err.message });
-    }
+      await load();
+      setMessage({ type: 'success', text: `User ${u.is_active ? 'disabled' : 'enabled'}.` });
+    } catch (err) { setMessage({ type: 'error', text: err.message }); }
+    finally { setBusy(false); }
+  }
+
+  async function handleDelete(u) {
+    if (!window.confirm(`Permanently delete user "${u.username}"? Historical Visitor Register and Call Log records will be retained.`)) return;
+    setBusy(true); setMessage(null);
+    try {
+      await api.request(`/settings/users/${u.id}`, { method: 'DELETE' });
+      await load();
+      setMessage({ type: 'success', text: `User ${u.username} deleted.` });
+    } catch (err) { setMessage({ type: 'error', text: err.message }); }
+    finally { setBusy(false); }
   }
 
   return (
     <div className="card">
       <h3 style={{ marginTop: 0 }}>Users</h3>
       {message && <div className={`alert ${message.type}`}>{message.text}</div>}
-      <table>
-        <thead><tr><th>Username</th><th>Full name</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>
-          {users.map((u) => (
-            <tr key={u.id}>
-              <td>{u.username}</td><td>{u.full_name}</td><td>{u.role}</td>
-              <td><span className={`badge ${u.is_active ? 'enabled' : 'disabled'}`}>{u.is_active ? 'Active' : 'Disabled'}</span></td>
-              <td><button className="secondary" onClick={() => handleToggleActive(u)}>{u.is_active ? 'Disable' : 'Enable'}</button></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <form onSubmit={handleCreate} style={{ marginTop: '1rem' }}>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>Username</th><th>Full name</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            {users.map((u) => (
+              <tr key={u.id}>
+                <td>{u.username}</td><td>{u.full_name || '—'}</td><td>{u.role === 'admin' ? 'Administrator' : 'Normal user'}</td>
+                <td><span className={`badge ${u.is_active ? 'enabled' : 'disabled'}`}>{u.is_active ? 'Active' : 'Disabled'}</span></td>
+                <td><div className="inline-actions">
+                  <button className="secondary" onClick={() => beginEdit(u)} disabled={busy}>Edit</button>
+                  <button className="secondary" onClick={() => handleToggleActive(u)} disabled={busy}>{u.is_active ? 'Disable' : 'Enable'}</button>
+                  <button className="danger" onClick={() => handleDelete(u)} disabled={busy}>Delete</button>
+                </div></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {editing !== null && (
+        <form onSubmit={handleEdit} className="subcard">
+          <div className="section-heading"><h4 style={{ margin: 0 }}>Edit User</h4><button type="button" className="secondary" onClick={cancelEdit}>Cancel</button></div>
+          <div className="form-grid">
+            <div><label>Username *</label><input value={editForm.username} onChange={(e) => setEditForm({ ...editForm, username: e.target.value })} required /></div>
+            <div><label>Full name *</label><input value={editForm.fullName} onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })} required /></div>
+            <div><label>New password</label><input type="password" minLength="8" placeholder="Leave blank to keep current" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} /></div>
+            <div><label>Role</label><select value={editForm.role} onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}><option value="user">Normal user</option><option value="admin">Administrator</option></select></div>
+            <div><label>Status</label><select value={editForm.isActive ? 'active' : 'disabled'} onChange={(e) => setEditForm({ ...editForm, isActive: e.target.value === 'active' })}><option value="active">Active</option><option value="disabled">Disabled</option></select></div>
+          </div>
+          <div className="actions"><button type="submit" className="primary" disabled={busy}>{busy ? 'Saving…' : 'Save changes'}</button><button type="button" className="secondary" onClick={cancelEdit}>Cancel</button></div>
+        </form>
+      )}
+
+      <form onSubmit={handleCreate} className="subcard">
+        <h4 style={{ marginTop: 0 }}>Add User</h4>
         <div className="form-grid">
           <div><label>Username *</label><input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required /></div>
-          <div><label>Full name</label><input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} /></div>
-          <div><label>Password * (min 8 chars)</label><input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required /></div>
-          <div>
-            <label>Role</label>
-            <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-              <option value="user">Normal user</option>
-              <option value="admin">Administrator</option>
-            </select>
-          </div>
+          <div><label>Full name *</label><input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required /></div>
+          <div><label>Password * (min 8 chars)</label><input type="password" minLength="8" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required /></div>
+          <div><label>Role</label><select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}><option value="user">Normal user</option><option value="admin">Administrator</option></select></div>
         </div>
-        <div className="actions"><button type="submit" className="primary">Add user</button></div>
+        <div className="actions"><button type="submit" className="primary" disabled={busy}>{busy ? 'Adding…' : 'Add user'}</button></div>
       </form>
     </div>
   );

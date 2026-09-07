@@ -11,8 +11,8 @@ router.post('/', async (req, res, next) => {
     const body = req.body;
     const name = requireString(body.name, 'Name');
     const reason = requireString(body.reason, 'Reason', { maxLen: 4000 });
-    const place = requireString(body.place, 'Place', { optional: true });
-    const phone = validatePhone(body.phone, 'Phone', { optional: true });
+    const place = requireString(body.place, 'Place');
+    const phone = validatePhone(body.phone, 'Phone', { optional: false });
     const callDate = validateDate(body.callDate, 'Date', { optional: true });
     const callTime = validateTime(body.callTime, 'Time', { optional: true });
 
@@ -23,6 +23,16 @@ router.post('/', async (req, res, next) => {
     });
 
     res.status(duplicate ? 200 : 201).json({ record, duplicate });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/:id', async (req, res, next) => {
+  try {
+    const record = await calllogService.getById(req.params.id);
+    if (!record) return res.status(404).json({ error: 'Call log record not found.' });
+    res.json({ record });
   } catch (err) {
     next(err);
   }

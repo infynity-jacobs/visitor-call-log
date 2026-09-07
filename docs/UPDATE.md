@@ -75,3 +75,10 @@ sudo ./deploy/update.sh <git-ref>
 The update process fetches the repository, verifies a clean working tree, creates a PostgreSQL backup, stages and builds the release outside the production directory, preserves `app/backend/.env`, deploys the code, runs pending migrations, restarts the service, and verifies `/api/health`. A rollback copy of the previous application code is retained under `/var/backups/visitor-call-log/releases/`.
 
 Do not run the update script from `/opt/visitor-call-log`; run it from the Git checkout.
+
+
+## v1.1.0 update notes
+
+The v1.1.0 release includes database migration `004_user_delete_and_search`, which changes user ownership foreign keys to `ON DELETE SET NULL` so deleting a user never deletes historical Visitor Register, Call Log, or audit records. The update script applies this migration automatically after taking its normal database backup.
+
+Application date/time display and report timestamps are presented in Asia/Kolkata (IST). Stored date/time values remain database UTC clock values for backward compatibility; filters convert IST calendar dates to the corresponding UTC bounds.

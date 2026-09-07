@@ -121,8 +121,9 @@ router.post('/users', requireAdmin, async (req, res, next) => {
   try {
     const username = requireString(req.body.username, 'Username', { maxLen: 100 });
     const password = requireString(req.body.password, 'Password');
-    const fullName = requireString(req.body.fullName, 'Full name', { optional: true });
-    const role = req.body.role === 'admin' ? 'admin' : 'user';
+    const fullName = requireString(req.body.fullName, 'Full name', { maxLen: 255, optional: true });
+    if (!['admin', 'user'].includes(req.body.role)) throw new ValidationError('Role must be admin or user.');
+    const role = req.body.role;
     if (password.length < 8) throw new ValidationError('Password must be at least 8 characters.');
 
     const hash = await bcrypt.hash(password, 10);
@@ -155,8 +156,12 @@ router.put('/users/:id', requireAdmin, async (req, res, next) => {
     const sets = [];
     const params = [];
     let idx = 1;
-    if (req.body.fullName !== undefined) { sets.push(`full_name = $${idx++}`); params.push(req.body.fullName); }
-    if (req.body.role !== undefined) { sets.push(`role = $${idx++}`); params.push(req.body.role === 'admin' ? 'admin' : 'user'); }
+    if (req.body.username !== undefined) { sets.push(`username = $${idx++}`); params.push(requireString(req.body.username, 'Username', { maxLen: 100 })); }
+    if (req.body.fullName !== undefined) { sets.push(`full_name = $${idx++}`); params.push(requireString(req.body.fullName, 'Full name', { maxLen: 255 })); }
+    if (req.body.role !== undefined) {
+      if (!['admin', 'user'].includes(req.body.role)) throw new ValidationError('Role must be admin or user.');
+      sets.push(`role = $${idx++}`); params.push(req.body.role);
+    }
     if (typeof req.body.isActive === 'boolean') { sets.push(`is_active = $${idx++}`); params.push(req.body.isActive); }
     if (req.body.password) {
       if (req.body.password.length < 8) throw new ValidationError('Password must be at least 8 characters.');
@@ -175,6 +180,30 @@ router.put('/users/:id', requireAdmin, async (req, res, next) => {
     if (result.rows.length === 0) return res.status(404).json({ error: 'User not found.' });
     res.json({ user: result.rows[0] });
   } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Username already exists.' });
+    next(err);
+  }
+});
+
+router.delete('/users/:id', requireAdmin, async (req, res, next) => {
+  try {
+    const targetId = Number(req.params.id);
+    if (!Number.isSafeInteger(targetId) || targetId < 1) throw new ValidationError('Invalid user ID.');
+    if (targetId === Number(req.user.id)) throw new ValidationError('You cannot delete your own administrator account.');
+
+    const target = await query('SELECT id, role, is_active FROM users WHERE id = $1', [targetId]);
+    if (!target.rows.length) return res.status(404).json({ error: 'User not found.' });
+
+    if (target.rows[0].role === 'admin' && target.rows[0].is_active) {
+      const admins = await query("SELECT COUNT(*)::int AS count FROM users WHERE role = 'admin' AND is_active = true AND id <> $1", [targetId]);
+      if (admins.rows[0].count === 0) throw new ValidationError('At least one active administrator account must remain.');
+    }
+
+    const result = await query('DELETE FROM users WHERE id = $1 RETURNING id, username', [targetId]);
+    if (!result.rows.length) return res.status(404).json({ error: 'User not found.' });
+    res.json({ success: true, user: result.rows[0] });
+  } catch (err) {
+    if (err.code === '23503') return next(new ValidationError('This user cannot be deleted because historical records reference the account.'));
     next(err);
   }
 });
