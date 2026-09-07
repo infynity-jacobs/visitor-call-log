@@ -1,0 +1,27 @@
+[Unit]
+Description=Visitor Register & Call Log API
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=vcl-app
+Group=vcl-app
+WorkingDirectory=/opt/visitor-call-log/app/backend
+EnvironmentFile=/opt/visitor-call-log/app/backend/.env
+ExecStart=/usr/bin/node src/server.js
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=visitor-call-log
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/visitor-call-log/app/backend
+
+[Install]
+WantedBy=multi-user.target
