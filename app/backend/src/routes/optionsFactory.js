@@ -29,6 +29,8 @@ function buildOptionsRouter(tableName) {
   router.post('/', requireAdmin, async (req, res, next) => {
     try {
       const label = requireString(req.body.label, 'Label', { maxLen: 100 });
+      const duplicate = await query(`SELECT 1 FROM ${tableName} WHERE LOWER(label) = LOWER($1)`, [label]);
+      if (duplicate.rows.length) throw new ValidationError('An option with this label already exists.');
       const maxOrderRes = await query(`SELECT COALESCE(MAX(sort_order), 0) AS max_order FROM ${tableName}`);
       const nextOrder = maxOrderRes.rows[0].max_order + 1;
       const result = await query(
@@ -44,6 +46,10 @@ function buildOptionsRouter(tableName) {
   router.put('/:id', requireAdmin, async (req, res, next) => {
     try {
       const label = requireString(req.body.label, 'Label', { maxLen: 100, optional: true });
+      if (label !== null) {
+        const duplicate = await query(`SELECT 1 FROM ${tableName} WHERE LOWER(label) = LOWER($1) AND id <> $2`, [label, req.params.id]);
+        if (duplicate.rows.length) throw new ValidationError('An option with this label already exists.');
+      }
       const isEnabled = typeof req.body.isEnabled === 'boolean' ? req.body.isEnabled : undefined;
 
       const sets = [];
@@ -83,10 +89,19 @@ function buildOptionsRouter(tableName) {
       if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
         throw new ValidationError('orderedIds must be a non-empty array.');
       }
+      const ids = orderedIds.map((id) => Number(id));
+      if (ids.some((id) => !Number.isSafeInteger(id) || id < 1) || new Set(ids).size !== ids.length) {
+        throw new ValidationError('orderedIds must contain unique positive integer IDs.');
+      }
+      const existing = await query(`SELECT id FROM ${tableName} ORDER BY id`);
+      const existingIds = existing.rows.map((r) => Number(r.id));
+      if (ids.length !== existingIds.length || ids.some((id) => !existingIds.includes(id))) {
+        throw new ValidationError('orderedIds must contain every option exactly once.');
+      }
       await withTransaction(async (client) => {
-        for (let i = 0; i < orderedIds.length; i += 1) {
+        for (let i = 0; i < ids.length; i += 1) {
           // eslint-disable-next-line no-await-in-loop
-          await client.query(`UPDATE ${tableName} SET sort_order = $1, updated_at = now() WHERE id = $2`, [i + 1, orderedIds[i]]);
+          await client.query(`UPDATE ${tableName} SET sort_order = $1, updated_at = now() WHERE id = $2`, [i + 1, ids[i]]);
         }
       });
       res.json({ success: true });

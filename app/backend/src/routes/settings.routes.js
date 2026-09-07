@@ -2,7 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { query } = require('../db/pool');
-const { requireString, validateEmail } = require('../utils/validators');
+const { requireString, validateEmail, validatePositiveInt, validatePhone } = require('../utils/validators');
 const { ValidationError } = require('../middleware/errorHandler');
 const { encrypt } = require('../utils/crypto');
 const emailService = require('../services/email.service');
@@ -27,14 +27,19 @@ router.put('/branding', requireAdmin, async (req, res, next) => {
   try {
     const b = req.body;
     const orgName = requireString(b.orgName, 'Organization Name', { maxLen: 255 });
+    const email = validateEmail(b.email, 'Email', { optional: true });
+    const phone = validatePhone(b.phone, 'Phone', { optional: true });
+    const website = b.website ? requireString(b.website, 'Website', { maxLen: 255 }) : null;
+    const reportHeader = b.reportHeader ? requireString(b.reportHeader, 'Report Header', { maxLen: 500 }) : null;
+    const reportFooter = b.reportFooter ? requireString(b.reportFooter, 'Report Footer', { maxLen: 500 }) : null;
     const result = await query(
       `UPDATE branding_settings SET
          org_name = $1, logo_path = $2, address = $3, phone = $4,
          email = $5, website = $6, report_header = $7, report_footer = $8,
          updated_at = now()
        WHERE id = 1 RETURNING *`,
-      [orgName, b.logoPath || null, b.address || null, b.phone || null,
-        b.email || null, b.website || null, b.reportHeader || null, b.reportFooter || null]
+      [orgName, b.logoPath || null, b.address || null, phone,
+        email, website, reportHeader, reportFooter]
     );
     res.json({ branding: result.rows[0] });
   } catch (err) {
@@ -60,7 +65,12 @@ router.get('/smtp', requireAdmin, async (req, res, next) => {
 router.put('/smtp', requireAdmin, async (req, res, next) => {
   try {
     const b = req.body;
-    const security = ['none', 'tls', 'ssl'].includes(b.security) ? b.security : 'none';
+    const security = ['none', 'tls', 'ssl'].includes(b.security) ? b.security : (() => { throw new ValidationError('Security must be one of: none, tls, ssl.'); })();
+    const smtpPort = b.smtpPort === undefined || b.smtpPort === null || b.smtpPort === '' ? null : validatePositiveInt(b.smtpPort, 'SMTP Port', { min: 1, max: 65535 });
+    const fromEmail = validateEmail(b.fromEmail, 'From email', { optional: true });
+    const smtpHost = b.smtpHost ? requireString(b.smtpHost, 'SMTP Host', { maxLen: 255 }) : null;
+    const smtpUsername = b.smtpUsername ? requireString(b.smtpUsername, 'SMTP Username', { maxLen: 255 }) : null;
+    const fromName = b.fromName ? requireString(b.fromName, 'From name', { maxLen: 255 }) : null;
     const encryptedPassword = b.smtpPassword ? encrypt(b.smtpPassword) : undefined;
 
     const sets = [
@@ -68,8 +78,7 @@ router.put('/smtp', requireAdmin, async (req, res, next) => {
       'smtp_username = $4', 'from_email = $5', 'from_name = $6', 'updated_at = now()'
     ];
     const params = [
-      b.smtpHost || null, b.smtpPort ? parseInt(b.smtpPort, 10) : null, security,
-      b.smtpUsername || null, b.fromEmail || null, b.fromName || null
+      smtpHost, smtpPort, security, smtpUsername, fromEmail, fromName
     ];
     if (encryptedPassword !== undefined) {
       sets.push(`smtp_password_enc = $${params.length + 1}`);
@@ -130,6 +139,19 @@ router.post('/users', requireAdmin, async (req, res, next) => {
 
 router.put('/users/:id', requireAdmin, async (req, res, next) => {
   try {
+    const targetId = Number(req.params.id);
+    if (!Number.isSafeInteger(targetId) || targetId < 1) throw new ValidationError('Invalid user ID.');
+    if (typeof req.body.isActive === 'boolean' && targetId === Number(req.user.id) && req.body.isActive === false) {
+      throw new ValidationError('You cannot deactivate your own administrator account.');
+    }
+    if (req.body.role === 'user' || req.body.isActive === false) {
+      const target = await query('SELECT id, role, is_active FROM users WHERE id = $1', [targetId]);
+      if (!target.rows.length) return res.status(404).json({ error: 'User not found.' });
+      if (target.rows[0].role === 'admin' && (req.body.role === 'user' || req.body.isActive === false)) {
+        const admins = await query("SELECT COUNT(*)::int AS count FROM users WHERE role = 'admin' AND is_active = true AND id <> $1", [targetId]);
+        if (admins.rows[0].count === 0) throw new ValidationError('At least one active administrator account must remain.');
+      }
+    }
     const sets = [];
     const params = [];
     let idx = 1;

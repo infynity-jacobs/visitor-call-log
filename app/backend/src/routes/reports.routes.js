@@ -4,7 +4,7 @@ const visitorsService = require('../services/visitors.service');
 const calllogService = require('../services/calllog.service');
 const reportService = require('../services/report.service');
 const emailService = require('../services/email.service');
-const { validateEmail, requireString } = require('../utils/validators');
+const { validateEmail, requireString, validateDateFilter } = require('../utils/validators');
 const { ValidationError } = require('../middleware/errorHandler');
 
 const router = express.Router();
@@ -29,9 +29,9 @@ function titleFor(type) {
 router.get('/:type/:format', async (req, res, next) => {
   try {
     const { type, format } = req.params;
-    const { mode = 'all', date, startDate, endDate } = req.query;
-    const { rows, columns } = await loadDataset(type, { mode, date, startDate, endDate });
-    const filterLabel = reportService.formatFilterLabel({ mode, date, startDate, endDate });
+    const filter = validateDateFilter(req.query);
+    const { rows, columns } = await loadDataset(type, filter);
+    const filterLabel = reportService.formatFilterLabel(filter);
     const title = titleFor(type);
 
     if (format === 'xlsx') {
@@ -55,14 +55,17 @@ router.get('/:type/:format', async (req, res, next) => {
 router.post('/:type/email', async (req, res, next) => {
   try {
     const { type } = req.params;
-    const { mode = 'all', date, startDate, endDate, format = 'pdf', to, subject, message } = req.body;
+    const { format = 'pdf', to, subject, message } = req.body;
+    const filter = validateDateFilter(req.body);
 
     const recipient = validateEmail(to, 'Recipient email', { optional: false });
     const emailSubject = requireString(subject, 'Subject', { optional: true }) || titleFor(type);
 
-    const { rows, columns } = await loadDataset(type, { mode, date, startDate, endDate });
-    const filterLabel = reportService.formatFilterLabel({ mode, date, startDate, endDate });
+    const { rows, columns } = await loadDataset(type, filter);
+    const filterLabel = reportService.formatFilterLabel(filter);
     const title = titleFor(type);
+
+    if (!['pdf', 'xlsx'].includes(format)) throw new ValidationError('Unknown report format. Use "pdf" or "xlsx".');
 
     let buffer; let filename; let contentType;
     if (format === 'xlsx') {

@@ -105,7 +105,7 @@ log "Building frontend"
 su - "$APP_USER" -s /bin/bash -c "cd '$FRONTEND_DIR' && npm ci && npm run build" || fail "Frontend build failed"
 
 log "Applying database migrations"
-"$SCRIPT_DIR/migrate.sh"
+bash "$SCRIPT_DIR/migrate.sh"
 
 log "Installing systemd service"
 cp "$SCRIPT_DIR/systemd/${SERVICE_NAME}.service" "/etc/systemd/system/${SERVICE_NAME}.service"
@@ -125,7 +125,7 @@ systemctl reload nginx
 
 log "Running health check"
 sleep 2
-"$REPO_ROOT/scripts/health_check.sh" || echo "WARNING: health check did not pass — check 'journalctl -u ${SERVICE_NAME}'."
+bash "$REPO_ROOT/scripts/health_check.sh" || echo "WARNING: health check did not pass — check 'journalctl -u ${SERVICE_NAME}'."
 
 log "Installation complete."
 echo "Application directory: $APP_DIR"

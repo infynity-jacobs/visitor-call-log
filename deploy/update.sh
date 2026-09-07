@@ -24,7 +24,7 @@ fail() { echo -e "\033[1;31mERROR:\033[0m $1" >&2; exit 1; }
 OLD_VERSION="$(cat "$APP_DIR/VERSION" 2>/dev/null || echo 'unknown')"
 
 log "Backing up database before update"
-"$APP_DIR/deploy/backup.sh"
+bash "$APP_DIR/deploy/backup.sh"
 
 log "Fetching latest code ($GIT_REF)"
 su - "$APP_USER" -s /bin/bash -c "cd '$APP_DIR' && git fetch --all --tags && git checkout $GIT_REF" || fail "Git update failed"
@@ -38,7 +38,7 @@ log "Building frontend"
 su - "$APP_USER" -s /bin/bash -c "cd '$APP_DIR/app/frontend' && npm ci && npm run build" || fail "Frontend build failed"
 
 log "Applying database migrations"
-"$APP_DIR/deploy/migrate.sh"
+bash "$APP_DIR/deploy/migrate.sh"
 
 log "Restarting service"
 systemctl restart "$SERVICE_NAME"
@@ -48,7 +48,7 @@ sleep 2
 systemctl is-active --quiet "$SERVICE_NAME" || fail "Service failed to start after update. Check: journalctl -u ${SERVICE_NAME} -n 50"
 
 log "Running health check"
-"$APP_DIR/scripts/health_check.sh" || fail "Health check failed after update. The database has been backed up; consider ./deploy/restore.sh if you need to roll back the data, and 'git checkout <old-ref>' to roll back the code."
+bash "$APP_DIR/scripts/health_check.sh" || fail "Health check failed after update. The database has been backed up; consider ./deploy/restore.sh if you need to roll back the data, and 'git checkout <old-ref>' to roll back the code."
 
 echo
 echo "Update complete."

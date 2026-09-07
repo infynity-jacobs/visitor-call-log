@@ -14,7 +14,7 @@ function formatFilterLabel({ mode, date, startDate, endDate }) {
 }
 
 const VISITOR_COLUMNS = [
-  { header: 'S.No.', key: 'id', width: 8 },
+  { header: 'S.No.', key: 'report_sno', width: 8 },
   { header: 'Date', key: 'visit_date', width: 12 },
   { header: 'Time', key: 'visit_time', width: 10 },
   { header: 'Name', key: 'name', width: 22 },
@@ -25,7 +25,7 @@ const VISITOR_COLUMNS = [
 ];
 
 const CALLLOG_COLUMNS = [
-  { header: 'S.No.', key: 'id', width: 8 },
+  { header: 'S.No.', key: 'report_sno', width: 8 },
   { header: 'Date', key: 'call_date', width: 12 },
   { header: 'Time', key: 'call_time', width: 10 },
   { header: 'Name', key: 'name', width: 22 },
@@ -53,21 +53,24 @@ async function generateExcel({ title, columns, rows, filterLabel }) {
     views: [{ state: 'frozen', ySplit: 5 }]
   });
 
-  sheet.mergeCells('A1:H1');
+  const endCol = columns.length;
+  const endLetter = String.fromCharCode(64 + endCol);
+
+  sheet.mergeCells(`A1:${endLetter}1`);
   sheet.getCell('A1').value = branding.org_name || 'Organization';
   sheet.getCell('A1').font = { size: 16, bold: true };
 
-  sheet.mergeCells('A2:H2');
-  sheet.getCell('A2').value = [branding.address, branding.phone, branding.email].filter(Boolean).join(' | ');
+  sheet.mergeCells(`A2:${endLetter}2`);
+  sheet.getCell('A2').value = [branding.address, branding.phone, branding.email, branding.website].filter(Boolean).join(' | ');
   sheet.getCell('A2').font = { size: 10, italic: true };
 
-  sheet.mergeCells('A3:H3');
-  sheet.getCell('A3').value = `${title} — ${filterLabel}`;
+  sheet.mergeCells(`A3:${endLetter}3`);
+  sheet.getCell('A3').value = branding.report_header || title;
   sheet.getCell('A3').font = { size: 13, bold: true };
 
-  sheet.mergeCells('A4:H4');
-  sheet.getCell('A4').value = `Generated: ${new Date().toLocaleString()}`;
-  sheet.getCell('A4').font = { size: 9, color: { argb: 'FF666666' } };
+  sheet.mergeCells(`A4:${endLetter}4`);
+  sheet.getCell('A4').value = `${title} — ${filterLabel} | Generated: ${new Date().toLocaleString()}`;
+  sheet.getCell('A4').font = { size: 9, italic: true };
 
   sheet.getRow(5).values = columns.map((c) => c.header);
   sheet.getRow(5).font = { bold: true };
@@ -77,13 +80,13 @@ async function generateExcel({ title, columns, rows, filterLabel }) {
   });
   columns.forEach((c, i) => { sheet.getColumn(i + 1).width = c.width; });
 
-  rows.forEach((row) => {
-    sheet.addRow(columns.map((c) => row[c.key] ?? ''));
+  rows.forEach((row, index) => {
+    sheet.addRow(columns.map((c) => c.key === 'report_sno' ? index + 1 : (row[c.key] ?? '')));
   });
 
   if (branding.report_footer) {
     const footerRowIdx = sheet.lastRow.number + 2;
-    sheet.mergeCells(`A${footerRowIdx}:H${footerRowIdx}`);
+    sheet.mergeCells(`A${footerRowIdx}:${endLetter}${footerRowIdx}`);
     sheet.getCell(`A${footerRowIdx}`).value = branding.report_footer;
     sheet.getCell(`A${footerRowIdx}`).font = { size: 9, italic: true, color: { argb: 'FF888888' } };
   }
@@ -108,7 +111,8 @@ async function generatePdf({ title, columns, rows, filterLabel }) {
   const contactLine = [branding.address, branding.phone, branding.email].filter(Boolean).join(' | ');
   if (contactLine) doc.fontSize(9).font('Helvetica').text(contactLine, { align: 'center' });
   doc.moveDown(0.5);
-  doc.fontSize(13).font('Helvetica-Bold').text(`${title} — ${filterLabel}`, { align: 'center' });
+  doc.fontSize(13).font('Helvetica-Bold').text(branding.report_header || title, { align: 'center' });
+  doc.fontSize(10).font('Helvetica-Bold').text(`${title} — ${filterLabel}`, { align: 'center' });
   doc.fontSize(8).font('Helvetica').fillColor('#666666')
     .text(`Generated: ${new Date().toLocaleString()}`, { align: 'center' });
   doc.fillColor('#000000');
@@ -138,9 +142,10 @@ async function generatePdf({ title, columns, rows, filterLabel }) {
   doc.moveTo(startX, y).lineTo(startX + usableWidth, y).stroke();
   y += 4;
 
-  rows.forEach((row) => {
+  rows.forEach((row, index) => {
+    row.report_sno = index + 1;
     ensureSpace();
-    drawRow(columns.map((c) => row[c.key] ?? ''));
+    drawRow(columns.map((c) => c.key === 'report_sno' ? row.report_sno : (row[c.key] ?? '')));
   });
 
   // Page numbers and footer on every page.

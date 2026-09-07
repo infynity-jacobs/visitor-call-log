@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  requireString, validatePhone, validateEmail, validateDate, validateTime
+  requireString, validatePhone, validateEmail, validateDate, validateTime, validateDateFilter
 } = require('../../app/backend/src/utils/validators');
 
 test('requireString: trims and accepts a normal value', () => {
@@ -50,4 +50,23 @@ test('validateTime: accepts HH:MM', () => {
 
 test('validateTime: rejects garbage', () => {
   assert.throws(() => validateTime('not-a-time', 'Time', { optional: false }));
+});
+
+
+test('validateDate: rejects impossible calendar dates', () => {
+  assert.throws(() => validateDate('2026-02-30', 'Date', { optional: false }), /valid calendar date/);
+  assert.throws(() => validateDate('2026-13-01', 'Date', { optional: false }), /valid calendar date/);
+});
+
+test('validateTime: rejects out-of-range time values', () => {
+  assert.throws(() => validateTime('24:00', 'Time', { optional: false }), /valid time/);
+  assert.throws(() => validateTime('12:60', 'Time', { optional: false }), /valid time/);
+  assert.throws(() => validateTime('12:30:60', 'Time', { optional: false }), /valid time/);
+});
+
+test('validateDateFilter: validates mode and range ordering', () => {
+  assert.deepEqual(validateDateFilter({ mode: 'all' }), { mode: 'all' });
+  assert.throws(() => validateDateFilter({ mode: 'single' }), /Date is required/);
+  assert.throws(() => validateDateFilter({ mode: 'range', startDate: '2026-09-20', endDate: '2026-09-01' }), /cannot be later/);
+  assert.throws(() => validateDateFilter({ mode: 'bogus' }), /Mode must be/);
 });

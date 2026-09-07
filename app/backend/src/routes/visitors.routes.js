@@ -1,7 +1,7 @@
 const express = require('express');
 const { authenticate } = require('../middleware/auth');
 const visitorsService = require('../services/visitors.service');
-const { requireString, validatePhone, validateDate, validateTime } = require('../utils/validators');
+const { requireString, validatePhone, validateDate, validateTime, validatePositiveInt, validateNonNegativeInt, validateDateFilter } = require('../utils/validators');
 const { ValidationError } = require('../middleware/errorHandler');
 const { query } = require('../db/pool');
 
@@ -19,11 +19,19 @@ const PURPOSE_DETAIL_MAP = {
   Other: 'otherDetails'
 };
 
+async function validateConfiguredOption(tableName, label, field) {
+  if (!label) return null;
+  const result = await query(`SELECT label FROM ${tableName} WHERE label = $1 AND is_enabled = true`, [label]);
+  if (result.rows.length === 0) throw new ValidationError(`${field} must be selected from the current enabled options.`);
+  return result.rows[0].label;
+}
+
 router.post('/', async (req, res, next) => {
   try {
     const body = req.body;
     const name = requireString(body.name, 'Name');
     const purpose = requireString(body.purpose, 'Purpose');
+    await validateConfiguredOption('purpose_options', purpose, 'Purpose');
     const place = requireString(body.place, 'Place', { optional: true });
     const phone = validatePhone(body.phone, 'Phone', { optional: true });
     const visitDate = validateDate(body.visitDate, 'Date', { optional: true });
@@ -31,6 +39,7 @@ router.post('/', async (req, res, next) => {
 
     // Validate the conditional field expected for this purpose, if the spec defines one.
     if (purpose === 'Meeting') {
+      await validateConfiguredOption('meeting_person_options', body.personToVisit, 'Person to Visit');
       if (!body.personToVisit) {
         throw new ValidationError('Person to Visit is required when Purpose is Meeting.');
       }
@@ -42,6 +51,10 @@ router.post('/', async (req, res, next) => {
       if (!body[field]) {
         throw new ValidationError(`Details are required for Purpose "${purpose}".`);
       }
+    }
+
+    if (purpose === 'Enquiry' && body.enquiryType) {
+      await validateConfiguredOption('enquiry_type_options', body.enquiryType, 'Enquiry Type');
     }
 
     if (purpose === 'Enquiry' && !body.enquiryType) {
@@ -72,23 +85,11 @@ router.post('/', async (req, res, next) => {
 
 router.get('/', async (req, res, next) => {
   try {
-    const { mode = 'all', date, startDate, endDate, limit, offset } = req.query;
-    const records = await visitorsService.list({
-      mode, date, startDate, endDate,
-      limit: limit ? parseInt(limit, 10) : undefined,
-      offset: offset ? parseInt(offset, 10) : undefined
-    });
+    const filter = validateDateFilter(req.query);
+    const limitValue = validatePositiveInt(req.query.limit, 'Limit', { defaultValue: 500, min: 1, max: 1000 });
+    const offsetValue = validateNonNegativeInt(req.query.offset, 'Offset', { defaultValue: 0, max: 10000000 });
+    const records = await visitorsService.list({ ...filter, limit: limitValue, offset: offsetValue });
     res.json({ records });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.get('/:id', async (req, res, next) => {
-  try {
-    const record = await visitorsService.getById(req.params.id);
-    if (!record) return res.status(404).json({ error: 'Visitor record not found.' });
-    res.json({ record });
   } catch (err) {
     next(err);
   }
@@ -107,6 +108,16 @@ router.get('/options/all', async (req, res, next) => {
       enquiryTypeOptions: enquiry.rows,
       meetingPersonOptions: meeting.rows
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/:id', async (req, res, next) => {
+  try {
+    const record = await visitorsService.getById(req.params.id);
+    if (!record) return res.status(404).json({ error: 'Visitor record not found.' });
+    res.json({ record });
   } catch (err) {
     next(err);
   }

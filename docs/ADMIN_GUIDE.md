@@ -23,8 +23,8 @@ Meeting Person) supports:
 
 ## Branding
 
-Under **Settings → Branding**, configure your organization name, logo, address, phone,
-email, website, and report header/footer text. These appear:
+Under **Settings → Branding**, configure your organization name, logo path/URL, address, phone, email, website, and report
+header/footer text. These appear:
 - In the app itself (organization name)
 - On every generated PDF and Excel report
 - In the body of emailed reports

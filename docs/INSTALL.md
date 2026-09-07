@@ -95,10 +95,10 @@ If you did not pass `--domain` during install, or you want to change it later:
 
 ## 8. Upload limits
 
-Report attachments and any logo uploads are capped by Nginx's `client_max_body_size`
-(set to 10m by default) in `deploy/nginx/visitor-call-log.conf`, and by Express's JSON
-body limit (`2mb`, in `app/backend/src/server.js`). Increase both together if you need
-larger uploads.
+The application currently does not implement logo file uploads. The Branding page accepts
+a logo path/URL for future/static use. Report generation uses the configured organization
+name, report header, report footer, contact details, and website text. Nginx's
+`client_max_body_size` is set to 10m for normal application requests.
 
 ## 9. Static file handling
 

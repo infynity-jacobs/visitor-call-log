@@ -39,7 +39,7 @@ from the standard local setup.
 
 ## What's covered
 
-- **Unit**: field validators (name/phone/email/date/time), SMTP password
+- **Unit**: field validators (name/phone/email/date/time), date-filter validation, SMTP password
   encrypt/decrypt round-tripping.
 - **Integration**: login (success/failure), auth enforcement on protected routes,
   Visitor Register conditional-field validation (e.g. Enquiry requires Enquiry Type),

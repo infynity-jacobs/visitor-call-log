@@ -103,8 +103,8 @@ export default function VisitorRegister() {
 
             {purpose === 'Bill Pay' && (
               <div>
-                <label htmlFor="purposeDetails">Bill Pay Details</label>
-                <input id="purposeDetails" value={form.purposeDetails} onChange={(e) => update('purposeDetails', e.target.value)} />
+                <label htmlFor="purposeDetails">Bill Pay Details *</label>
+                <input id="purposeDetails" value={form.purposeDetails} onChange={(e) => update('purposeDetails', e.target.value)} required />
               </div>
             )}
 
@@ -120,23 +120,23 @@ export default function VisitorRegister() {
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="enquiryDetails">Enquiry Details</label>
-                  <input id="enquiryDetails" value={form.enquiryDetails} onChange={(e) => update('enquiryDetails', e.target.value)} />
+                  <label htmlFor="enquiryDetails">Enquiry Details *</label>
+                  <input id="enquiryDetails" value={form.enquiryDetails} onChange={(e) => update('enquiryDetails', e.target.value)} required />
                 </div>
               </>
             )}
 
             {purpose === 'Complaint' && (
               <div>
-                <label htmlFor="complaintDetails">Complaint Details</label>
-                <input id="complaintDetails" value={form.complaintDetails} onChange={(e) => update('complaintDetails', e.target.value)} />
+                <label htmlFor="complaintDetails">Complaint Details *</label>
+                <input id="complaintDetails" value={form.complaintDetails} onChange={(e) => update('complaintDetails', e.target.value)} required />
               </div>
             )}
 
             {purpose === 'Purchase' && (
               <div>
-                <label htmlFor="purchaseDetails">Purchase Details</label>
-                <input id="purchaseDetails" value={form.purchaseDetails} onChange={(e) => update('purchaseDetails', e.target.value)} />
+                <label htmlFor="purchaseDetails">Purchase Details *</label>
+                <input id="purchaseDetails" value={form.purchaseDetails} onChange={(e) => update('purchaseDetails', e.target.value)} required />
               </div>
             )}
 
@@ -153,8 +153,8 @@ export default function VisitorRegister() {
                 </div>
                 {form.personToVisit === 'Others' && (
                   <div>
-                    <label htmlFor="personToVisitOther">Others Details</label>
-                    <input id="personToVisitOther" value={form.personToVisitOther} onChange={(e) => update('personToVisitOther', e.target.value)} />
+                    <label htmlFor="personToVisitOther">Others Details *</label>
+                    <input id="personToVisitOther" value={form.personToVisitOther} onChange={(e) => update('personToVisitOther', e.target.value)} required />
                   </div>
                 )}
               </>
@@ -162,22 +162,22 @@ export default function VisitorRegister() {
 
             {purpose === 'Interview' && (
               <div>
-                <label htmlFor="interviewDetails">Interview Details</label>
-                <input id="interviewDetails" value={form.interviewDetails} onChange={(e) => update('interviewDetails', e.target.value)} />
+                <label htmlFor="interviewDetails">Interview Details *</label>
+                <input id="interviewDetails" value={form.interviewDetails} onChange={(e) => update('interviewDetails', e.target.value)} required />
               </div>
             )}
 
             {purpose === 'Donation' && (
               <div>
-                <label htmlFor="donationDetails">Donation Details</label>
-                <input id="donationDetails" value={form.donationDetails} onChange={(e) => update('donationDetails', e.target.value)} />
+                <label htmlFor="donationDetails">Donation Details *</label>
+                <input id="donationDetails" value={form.donationDetails} onChange={(e) => update('donationDetails', e.target.value)} required />
               </div>
             )}
 
             {purpose === 'Other' && (
               <div>
-                <label htmlFor="otherDetails">Other Details</label>
-                <input id="otherDetails" value={form.otherDetails} onChange={(e) => update('otherDetails', e.target.value)} />
+                <label htmlFor="otherDetails">Other Details *</label>
+                <input id="otherDetails" value={form.otherDetails} onChange={(e) => update('otherDetails', e.target.value)} required />
               </div>
             )}
           </div>
@@ -200,7 +200,7 @@ export default function VisitorRegister() {
           <tbody>
             {recent.map((r) => (
               <tr key={r.id}>
-                <td>{r.id}</td>
+                <td>{recent.indexOf(r) + 1}</td>
                 <td>{String(r.visit_date).slice(0, 10)}</td>
                 <td>{String(r.visit_time).slice(0, 8)}</td>
                 <td>{r.name}</td>
