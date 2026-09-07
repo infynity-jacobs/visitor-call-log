@@ -9,6 +9,18 @@ const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Public branding used by the login page. Only non-sensitive branding fields are returned.
+router.get('/public-branding', async (req, res, next) => {
+  try {
+    const result = await query(
+      'SELECT org_name, logo_path FROM branding_settings WHERE id = 1'
+    );
+    res.json({ branding: result.rows[0] || { org_name: '', logo_path: null } });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Slow down brute-force login attempts.
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { api } from '../api/client';
 
 export default function Login() {
   const { login } = useAuth();
@@ -10,6 +11,13 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [branding, setBranding] = useState(null);
+
+  useEffect(() => {
+    api.request('/auth/public-branding')
+      .then((data) => setBranding(data.branding))
+      .catch(() => setBranding({ org_name: '', logo_path: null }));
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -29,10 +37,19 @@ export default function Login() {
   return (
     <div className="login-wrap">
       <div className="login-card">
-        <h2 style={{ marginTop: 0 }}>Sign in</h2>
-        <p style={{ color: '#6b7280', fontSize: '0.9rem', marginTop: '-0.5rem' }}>
-          Visitor Register &amp; Call Log System
-        </p>
+        <div className="login-branding">
+          {branding?.logo_path && (
+            <img
+              src={branding.logo_path}
+              alt="Organization logo"
+              className="login-logo"
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+          )}
+          {branding?.org_name && <div className="login-org-name">{branding.org_name}</div>}
+          <div className="login-app-name">VISITOR REGISTER &amp; CALL LOG</div>
+        </div>
+        <h2 className="login-title">Sign in</h2>
         {error && <div className="alert error">{error}</div>}
         <form onSubmit={handleSubmit}>
           <label htmlFor="username">Username</label>

@@ -1,3 +1,12 @@
+# Changelog
+
+## 1.2.6 - 2026-09-07
+- Added public branding endpoint for the login page, exposing only organization name and logo.
+- Added branded login page using the existing Branding settings.
+- Added self-service Change Password page for logged-in users.
+- Added current-password verification, minimum 8-character validation, confirmation matching, and forced re-login after a successful password change.
+- Added an account menu in the top navigation with Change Password and Log out.
+
 ## v1.2.5
 
 - Fixed historical Excel import failure caused by legacy phone values longer than 30 characters. Phone columns now support up to 100 characters.

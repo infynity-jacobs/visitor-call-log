@@ -5,6 +5,7 @@ import { api } from '../api/client';
 
 export function Navbar() {
   const { user, logout, isAdmin } = useAuth();
+  const [accountOpen, setAccountOpen] = useState(false);
   const navigate = useNavigate();
   const [branding, setBranding] = useState(null);
 
@@ -18,8 +19,14 @@ export function Navbar() {
   if (!user) return null;
 
   function handleLogout() {
+    setAccountOpen(false);
     logout();
     navigate('/login');
+  }
+
+  function openChangePassword() {
+    setAccountOpen(false);
+    navigate('/change-password');
   }
 
   const logo = branding?.logo_path;
@@ -58,8 +65,23 @@ export function Navbar() {
         </NavLink>
         <NavLink to="/reports" className={({ isActive }) => (isActive ? 'active' : '')}>Reports</NavLink>
         {isAdmin && <NavLink to="/settings" className={({ isActive }) => (isActive ? 'active' : '')}>Settings</NavLink>}
-        <span className="user-name">{user.fullName || user.username}</span>
-        <button onClick={handleLogout}>Log out</button>
+        <div className="account-menu">
+          <button
+            type="button"
+            className="account-trigger"
+            aria-expanded={accountOpen}
+            aria-haspopup="menu"
+            onClick={() => setAccountOpen((open) => !open)}
+          >
+            {user.fullName || user.username} ▾
+          </button>
+          {accountOpen && (
+            <div className="account-dropdown" role="menu">
+              <button type="button" role="menuitem" onClick={openChangePassword}>Change Password</button>
+              <button type="button" role="menuitem" onClick={handleLogout}>Log out</button>
+            </div>
+          )}
+        </div>
       </nav>
     </header>
   );
