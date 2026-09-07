@@ -40,7 +40,7 @@ module.exports = {
   // APP_VERSION is retained only as a compatibility fallback for older installs.
   version: (() => {
     try {
-      return fs.readFileSync(path.resolve(__dirname, '../../../VERSION'), 'utf8').trim();
+      return fs.readFileSync(path.resolve(__dirname, '../../../../VERSION'), 'utf8').trim();
     } catch (_) {
       return process.env.APP_VERSION || '1.0.0';
     }
