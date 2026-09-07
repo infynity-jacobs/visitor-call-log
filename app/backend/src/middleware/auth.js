@@ -41,4 +41,4 @@ function requireSuperAdmin(req, res, next) {
   return next();
 }
 
-module.exports = { authenticate, requireAdmin };
+module.exports = { authenticate, requireAdmin, requireSuperAdmin };

@@ -53,3 +53,5 @@ Cypress) covering full user flows: log in, save a visitor with each Purpose's
 conditional fields, generate and download a report, configure SMTP and send a test
 email. Add your preferred E2E framework's config and specs here as the frontend
 stabilizes.
+
+The unit suite also verifies that the Super Administrator middleware is exported and callable, preventing route startup failures caused by an undefined DELETE-route middleware.

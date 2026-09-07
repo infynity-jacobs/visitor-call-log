@@ -1,3 +1,10 @@
+## 1.2.3
+- Moved Visitor Register and Call Log module switching into the main header as distinct, color-coded buttons.
+- Applied configured organization branding (logo and organization name) directly to the main navigation header.
+- Removed duplicate module switch cards and standalone in-page branding from the Visitor Register page.
+- Kept the same header/module navigation consistently visible when switching between Visitor Register and Call Log.
+- Fixed the Super Administrator middleware export so the production server can start with the permanent-record deletion routes enabled.
+
 # Changelog
 
 ## 1.2.2

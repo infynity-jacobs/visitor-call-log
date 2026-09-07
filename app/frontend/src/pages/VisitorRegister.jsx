@@ -1,8 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api/client';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { GlobalSearch } from '../components/GlobalSearch.jsx';
-import { BrandingHeader } from '../components/BrandingHeader.jsx';
 import { formatIstDateTime } from '../utils/timezone';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -19,7 +18,6 @@ function newIdempotencyKey() {
 
 export default function VisitorRegister() {
   const { isSuperAdmin } = useAuth();
-  const navigate = useNavigate();
   const [options, setOptions] = useState({ purposeOptions: [], enquiryTypeOptions: [], meetingPersonOptions: [] });
   const [form, setForm] = useState(EMPTY_FORM);
   const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey());
@@ -96,8 +94,6 @@ export default function VisitorRegister() {
 
   return (
     <div>
-      <BrandingHeader />
-      <div className="module-switch"><button className="module-card visitor" onClick={() => navigate('/')}><strong>VISITOR REGISTER</strong><span>Register and manage visitors</span></button><button className="module-card call" onClick={() => navigate('/calllog')}><strong>CALL LOG</strong><span>Record and manage phone calls</span></button></div>
       <h2>VISITOR REGISTER</h2>
       <GlobalSearch />
       {selectedRecord && (
