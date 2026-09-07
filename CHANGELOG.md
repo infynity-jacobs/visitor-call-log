@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.2.0
+## 1.2.1
 - Compact PDF branding header with inline logo.
 - Super Administrator destructive record deletion with audit logging.
 - Historical Excel import for VISITOR REGISTER and CALL LOG with preview/validation.
