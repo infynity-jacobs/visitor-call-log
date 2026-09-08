@@ -1,3 +1,8 @@
+## 1.2.11
+
+- Redesigned Global Search as a single integrated search field for desktop and mobile.
+- Added search icon, embedded Search action, clear control, keyboard Enter support, and responsive touch-friendly sizing.
+
 ## 1.2.8
 
 - Added an Entry Date & Time (IST) picker to Visitor Register data entry.

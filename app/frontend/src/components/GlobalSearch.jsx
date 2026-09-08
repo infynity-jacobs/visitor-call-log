@@ -33,10 +33,31 @@ export function GlobalSearch() {
     <div className="card">
       <h3 style={{ marginTop: 0 }}>Global Search</h3>
       <p className="muted">Search all Visitor Register and Call Log history by name, place, phone, purpose, enquiry type, person, reason, or date.</p>
-      <form onSubmit={search} className="search-row">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search all records…" aria-label="Global search" />
-        <button type="submit" className="primary" disabled={busy}>{busy ? 'Searching…' : 'Search'}</button>
-        <button type="button" className="secondary" onClick={() => { setQ(''); setResults([]); setMessage(null); }}>Clear</button>
+      <form onSubmit={search} className="global-search-form">
+        <div className="global-search-field">
+          <span className="global-search-icon" aria-hidden="true">🔍</span>
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search all records..."
+            aria-label="Search all records"
+            autoComplete="off"
+          />
+          {q && (
+            <button
+              type="button"
+              className="global-search-clear"
+              onClick={() => { setQ(''); setResults([]); setMessage(null); }}
+              aria-label="Clear search"
+              title="Clear search"
+            >
+              ×
+            </button>
+          )}
+          <button type="submit" className="global-search-submit" disabled={busy} aria-label="Search" title={busy ? 'Searching' : 'Search'}>
+            {busy ? '…' : 'Search'}
+          </button>
+        </div>
       </form>
       {message && <div className={`alert ${message.type}`}>{message.text}</div>}
       {results.length > 0 && (
