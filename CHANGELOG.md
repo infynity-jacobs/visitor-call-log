@@ -96,3 +96,11 @@
 - Improved mobile Global Search and responsive table/report handling.
 - Preserved the approved desktop v1.2.8 design and functionality.
 - No database migration required.
+
+
+## 1.2.10
+- Fixed Visitor Register Entry Date & Time (IST) so it is populated with the current IST date/time on initial load and after Clear, matching Call Log behavior.
+- Made Call Log Entry Date & Time reset to the current IST date/time after Clear rather than retaining a stale page-load timestamp.
+- Fixed a Call Log selected-record error path that referenced an undefined message setter.
+- Made the Reports filtered-record preview mobile-friendly with responsive record cards instead of forcing the desktop table layout on small screens.
+- Kept desktop report layout intact while improving mobile filter controls, action buttons, and preview readability.

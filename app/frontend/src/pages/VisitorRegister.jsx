@@ -5,12 +5,15 @@ import { GlobalSearch } from '../components/GlobalSearch.jsx';
 import { formatIstDateTime, currentIstDateTimeInput, istDateTimeInputToUtcParts } from '../utils/timezone';
 import { useAuth } from '../context/AuthContext.jsx';
 
-const EMPTY_FORM = {
-  name: '', place: '', phone: '', purpose: '',
-  purposeDetails: '', enquiryType: '', enquiryDetails: '',
-  complaintDetails: '', purchaseDetails: '', personToVisit: '',
-  personToVisitOther: '', interviewDetails: '', donationDetails: '', otherDetails: ''
-};
+function createEmptyForm() {
+  return {
+    visitDateTime: currentIstDateTimeInput(),
+    name: '', place: '', phone: '', purpose: '',
+    purposeDetails: '', enquiryType: '', enquiryDetails: '',
+    complaintDetails: '', purchaseDetails: '', personToVisit: '',
+    personToVisitOther: '', interviewDetails: '', donationDetails: '', otherDetails: ''
+  };
+}
 
 function newIdempotencyKey() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -19,7 +22,7 @@ function newIdempotencyKey() {
 export default function VisitorRegister() {
   const { isSuperAdmin } = useAuth();
   const [options, setOptions] = useState({ purposeOptions: [], enquiryTypeOptions: [], meetingPersonOptions: [] });
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(createEmptyForm);
   const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey());
   const [message, setMessage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -61,7 +64,7 @@ export default function VisitorRegister() {
   }
 
   function resetForm() {
-    setForm(EMPTY_FORM);
+    setForm(createEmptyForm());
     setIdempotencyKey(newIdempotencyKey());
   }
 

@@ -59,9 +59,9 @@ export default function Reports() {
   const isVisitor = type === 'visitors';
   return (
     <div>
-      <h2>Reports</h2>
+      <h2>REPORTS</h2>
       {message && <div className={`alert ${message.type}`}>{message.text}</div>}
-      <div className="card">
+      <div className="card reports-filter">
         <h3 style={{ marginTop: 0 }}>Filter Records</h3>
         <div className="tabs">
           <button className={isVisitor ? 'active' : ''} onClick={() => { setType('visitors'); setRecords([]); }}>Visitors Register</button>
@@ -85,8 +85,16 @@ export default function Reports() {
 
       {records.length > 0 && <div className="card report-preview">
         <div className="section-heading"><h3 style={{ margin: 0 }}>{isVisitor ? 'Visitors Register' : 'Call Log'} — Filtered Records</h3><span className="muted">{records.length} record{records.length === 1 ? '' : 's'}</span></div>
-        <table><thead><tr>{isVisitor ? <><th>S.No.</th><th>Date</th><th>Time</th><th>Name</th><th>Place</th><th>Phone</th><th>Purpose</th></> : <><th>S.No.</th><th>Date</th><th>Time</th><th>Name</th><th>Place</th><th>Phone</th><th>Reason</th></>}</tr></thead>
-          <tbody>{records.map((r, i) => { const dt = formatIstDateTime(isVisitor ? r.visit_date : r.call_date, isVisitor ? r.visit_time : r.call_time); return <tr key={r.id}><td>{i + 1}</td><td>{dt.slice(0,10)}</td><td>{dt.slice(11,19)}</td><td>{r.name}</td><td>{r.place}</td><td>{r.phone}</td><td>{isVisitor ? r.purpose : r.reason}</td></tr>; })}</tbody>
+        <table className="mobile-cards report-table"><thead><tr>{isVisitor ? <><th>S.No.</th><th>Date</th><th>Time</th><th>Name</th><th>Place</th><th>Phone</th><th>Purpose</th></> : <><th>S.No.</th><th>Date</th><th>Time</th><th>Name</th><th>Place</th><th>Phone</th><th>Reason</th></>}</tr></thead>
+          <tbody>{records.map((r, i) => { const dt = formatIstDateTime(isVisitor ? r.visit_date : r.call_date, isVisitor ? r.visit_time : r.call_time); return <tr key={r.id}>
+            <td data-label="S.No.">{i + 1}</td>
+            <td data-label="Date">{dt.slice(0,10)}</td>
+            <td data-label="Time">{dt.slice(11,19)}</td>
+            <td data-label="Name">{r.name}</td>
+            <td data-label="Place">{r.place || '—'}</td>
+            <td data-label="Phone">{r.phone || '—'}</td>
+            <td data-label={isVisitor ? 'Purpose' : 'Reason'}>{isVisitor ? r.purpose : r.reason}</td>
+          </tr>; })}</tbody>
         </table>
       </div>}
 

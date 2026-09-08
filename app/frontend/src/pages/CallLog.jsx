@@ -5,7 +5,9 @@ import { formatIstDateTime, currentIstDateTimeInput, istDateTimeInputToUtcParts 
 import { useAuth } from '../context/AuthContext.jsx';
 import { GlobalSearch } from '../components/GlobalSearch.jsx';
 
-const EMPTY_FORM = { name: '', place: '', phone: '', reason: '', callDateTime: currentIstDateTimeInput() };
+function createEmptyForm() {
+  return { name: '', place: '', phone: '', reason: '', callDateTime: currentIstDateTimeInput() };
+}
 
 function newIdempotencyKey() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -13,7 +15,7 @@ function newIdempotencyKey() {
 
 export default function CallLog() {
   const { isSuperAdmin } = useAuth();
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(createEmptyForm);
   const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey());
   const [message, setMessage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -32,7 +34,7 @@ export default function CallLog() {
   useEffect(() => {
     const id = searchParams.get('record');
     if (!id) { setSelectedRecord(null); return; }
-    api.request(`/calllog/${id}`).then((data) => setSelectedRecord(data.record)).catch((err) => setFilterMessage({ type: 'error', text: err.message }));
+    api.request(`/calllog/${id}`).then((data) => setSelectedRecord(data.record)).catch((err) => setMessage({ type: 'error', text: err.message }));
   }, [searchParams]);
 
   async function deleteRecord(id) {
@@ -47,7 +49,7 @@ export default function CallLog() {
   }
 
   function resetForm() {
-    setForm(EMPTY_FORM);
+    setForm(createEmptyForm());
     setIdempotencyKey(newIdempotencyKey());
   }
 
