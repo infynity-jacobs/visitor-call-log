@@ -109,3 +109,10 @@
 - Fixed a Call Log selected-record error path that referenced an undefined message setter.
 - Made the Reports filtered-record preview mobile-friendly with responsive record cards instead of forcing the desktop table layout on small screens.
 - Kept desktop report layout intact while improving mobile filter controls, action buttons, and preview readability.
+
+
+## 1.2.12
+- Simplified Global Search UI by removing the redundant heading and explanatory text; the integrated search bar remains the sole search control.
+- Converted Global Search results to readable card-style records on mobile while preserving the desktop table presentation.
+- Added mobile field labels to search-result cards for clear identification of each value.
+- No database migration required.

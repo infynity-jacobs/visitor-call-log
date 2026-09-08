@@ -31,8 +31,6 @@ export function GlobalSearch() {
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0 }}>Global Search</h3>
-      <p className="muted">Search all Visitor Register and Call Log history by name, place, phone, purpose, enquiry type, person, reason, or date.</p>
       <form onSubmit={search} className="global-search-form">
         <div className="global-search-field">
           <span className="global-search-icon" aria-hidden="true">🔍</span>
@@ -63,17 +61,17 @@ export function GlobalSearch() {
       {results.length > 0 && (
         <div className="search-results">
           <div className="muted" style={{ marginBottom: '0.5rem' }}>Found {results.length} result{results.length === 1 ? '' : 's'}.</div>
-          <table>
+          <table className="mobile-cards search-results-table">
             <thead><tr><th>Module</th><th>Date &amp; Time (IST)</th><th>Name</th><th>Place</th><th>Phone</th><th>Details</th></tr></thead>
             <tbody>
               {results.map((r) => (
                 <tr key={`${r.type}-${r.id}`} className="clickable-row" onClick={() => openRecord(r)} title="Open record">
-                  <td><span className="badge">{r.type === 'visitor' ? 'Visitor' : 'Call Log'}</span></td>
-                  <td>{formatIstDateTime(r.record_date, r.record_time)}</td>
-                  <td>{r.name}</td>
-                  <td>{r.place || '—'}</td>
-                  <td>{r.phone || '—'}</td>
-                  <td>{r.type === 'visitor' ? [r.category, r.enquiry_type, r.person_to_visit].filter(Boolean).join(' / ') : r.reason}</td>
+                  <td data-label="Module"><span className="badge">{r.type === 'visitor' ? 'Visitor' : 'Call Log'}</span></td>
+                  <td data-label="Date &amp; Time (IST)">{formatIstDateTime(r.record_date, r.record_time)}</td>
+                  <td data-label="Name">{r.name}</td>
+                  <td data-label="Place">{r.place || '—'}</td>
+                  <td data-label="Phone">{r.phone || '—'}</td>
+                  <td data-label="Details">{r.type === 'visitor' ? [r.category, r.enquiry_type, r.person_to_visit].filter(Boolean).join(' / ') : r.reason}</td>
                 </tr>
               ))}
             </tbody>
