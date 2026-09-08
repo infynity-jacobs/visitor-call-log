@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api/client';
 import { useSearchParams } from 'react-router-dom';
-import { formatIstDateTime } from '../utils/timezone';
+import { formatIstDateTime, currentIstDateTimeInput, istDateTimeInputToUtcParts } from '../utils/timezone';
 import { useAuth } from '../context/AuthContext.jsx';
 import { GlobalSearch } from '../components/GlobalSearch.jsx';
 
-const EMPTY_FORM = { name: '', place: '', phone: '', reason: '' };
+const EMPTY_FORM = { name: '', place: '', phone: '', reason: '', callDateTime: currentIstDateTimeInput() };
 
 function newIdempotencyKey() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -57,7 +57,8 @@ export default function CallLog() {
     setSubmitting(true);
     setMessage(null);
     try {
-      const data = await api.request('/calllog', { method: 'POST', body: { ...form, idempotencyKey } });
+      const { date: callDate, time: callTime } = istDateTimeInputToUtcParts(form.callDateTime);
+      const data = await api.request('/calllog', { method: 'POST', body: { ...form, callDate, callTime, idempotencyKey } });
       setMessage({
         type: 'success',
         text: data.duplicate ? 'This entry was already saved.' : 'Call log entry saved successfully.'
@@ -92,6 +93,18 @@ export default function CallLog() {
       <div className="card">
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
+            <div>
+              <label htmlFor="callDateTime">Entry Date &amp; Time (IST) *</label>
+              <input
+                id="callDateTime"
+                type="datetime-local"
+                value={form.callDateTime}
+                onChange={(e) => update('callDateTime', e.target.value)}
+                step="1"
+                required
+              />
+              <small className="field-help">Use this to enter the actual call date/time when recording the entry later.</small>
+            </div>
             <div>
               <label htmlFor="name">Name *</label>
               <input id="name" value={form.name} onChange={(e) => update('name', e.target.value)} required autoFocus />

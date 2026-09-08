@@ -1,3 +1,11 @@
+## 1.2.8
+
+- Added an Entry Date & Time (IST) picker to Visitor Register data entry.
+- Added an Entry Date & Time (IST) picker to Call Log data entry.
+- The picker defaults to the current IST date/time and allows users to record the actual date/time when entering historical records later.
+- Converts the selected IST date/time to the existing UTC-clock database storage convention, preserving existing reporting, sorting, filtering, search, and import behavior.
+- No database migration required.
+
 # Changelog
 
 ## 1.2.7 - 2026-09-07

@@ -112,6 +112,7 @@ body {
   margin-bottom: 1rem;
 }
 
+.field-help { display:block; margin-top:.35rem; color:var(--muted); font-size:.78rem; line-height:1.35; }
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api/client';
 import { useSearchParams } from 'react-router-dom';
 import { GlobalSearch } from '../components/GlobalSearch.jsx';
-import { formatIstDateTime } from '../utils/timezone';
+import { formatIstDateTime, currentIstDateTimeInput, istDateTimeInputToUtcParts } from '../utils/timezone';
 import { useAuth } from '../context/AuthContext.jsx';
 
 const EMPTY_FORM = {
@@ -71,9 +71,10 @@ export default function VisitorRegister() {
     setSubmitting(true);
     setMessage(null);
     try {
+      const { date: visitDate, time: visitTime } = istDateTimeInputToUtcParts(form.visitDateTime);
       const data = await api.request('/visitors', {
         method: 'POST',
-        body: { ...form, idempotencyKey }
+        body: { ...form, visitDate, visitTime, idempotencyKey }
       });
       setMessage({
         type: 'success',
@@ -114,6 +115,18 @@ export default function VisitorRegister() {
       <div className="card">
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
+            <div>
+              <label htmlFor="visitDateTime">Entry Date &amp; Time (IST) *</label>
+              <input
+                id="visitDateTime"
+                type="datetime-local"
+                value={form.visitDateTime}
+                onChange={(e) => update('visitDateTime', e.target.value)}
+                step="1"
+                required
+              />
+              <small className="field-help">Use this to enter the actual visitor date/time when recording the entry later.</small>
+            </div>
             <div>
               <label htmlFor="name">Name *</label>
               <input id="name" value={form.name} onChange={(e) => update('name', e.target.value)} required autoFocus />
