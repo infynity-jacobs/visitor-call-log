@@ -87,3 +87,12 @@
 
 ### Compatibility
 - Production database date/time storage remains unchanged for backward compatibility. User-facing filtering and display convert stored UTC clock values to IST.
+
+## 1.2.9 - Mobile UI Enhancement
+- Added responsive mobile navigation with compact hamburger menu.
+- Optimized Visitor Register and Call Log data-entry forms for phone/tablet screens.
+- Added touch-friendly controls, spacing, and full-width mobile actions.
+- Converted recent-entry tables to readable card-style layouts on small screens.
+- Improved mobile Global Search and responsive table/report handling.
+- Preserved the approved desktop v1.2.8 design and functionality.
+- No database migration required.

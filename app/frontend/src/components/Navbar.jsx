@@ -8,6 +8,7 @@ export function Navbar() {
   const [accountOpen, setAccountOpen] = useState(false);
   const navigate = useNavigate();
   const [branding, setBranding] = useState(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -20,12 +21,14 @@ export function Navbar() {
 
   function handleLogout() {
     setAccountOpen(false);
+    setMobileOpen(false);
     logout();
     navigate('/login');
   }
 
   function openChangePassword() {
     setAccountOpen(false);
+    setMobileOpen(false);
     navigate('/change-password');
   }
 
@@ -49,22 +52,34 @@ export function Navbar() {
         </div>
       </div>
 
-      <nav className="nav-links" aria-label="Primary navigation">
+      <button
+        type="button"
+        className="mobile-menu-toggle"
+        aria-expanded={mobileOpen}
+        aria-controls="primary-navigation"
+        onClick={() => setMobileOpen((open) => !open)}
+      >
+        <span aria-hidden="true">☰</span><span className="sr-only">Menu</span>
+      </button>
+
+      <nav id="primary-navigation" className={`nav-links${mobileOpen ? ' mobile-open' : ''}`} aria-label="Primary navigation">
         <NavLink
           to="/"
           end
+          onClick={() => setMobileOpen(false)}
           className={({ isActive }) => `module-nav visitor-nav${isActive ? ' active' : ''}`}
         >
           <span aria-hidden="true">👥</span> VISITOR REGISTER
         </NavLink>
         <NavLink
           to="/calllog"
+          onClick={() => setMobileOpen(false)}
           className={({ isActive }) => `module-nav call-nav${isActive ? ' active' : ''}`}
         >
           <span aria-hidden="true">☎</span> CALL LOG
         </NavLink>
-        <NavLink to="/reports" className={({ isActive }) => (isActive ? 'active' : '')}>Reports</NavLink>
-        {isAdmin && <NavLink to="/settings" className={({ isActive }) => (isActive ? 'active' : '')}>Settings</NavLink>}
+        <NavLink to="/reports" onClick={() => setMobileOpen(false)} className={({ isActive }) => (isActive ? 'active' : '')}>Reports</NavLink>
+        {isAdmin && <NavLink to="/settings" onClick={() => setMobileOpen(false)} className={({ isActive }) => (isActive ? 'active' : '')}>Settings</NavLink>}
         <div className="account-menu">
           <button
             type="button"

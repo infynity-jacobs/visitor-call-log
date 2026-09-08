@@ -241,20 +241,20 @@ export default function VisitorRegister() {
 
       <div className="card">
         <div className="section-heading"><h3 style={{ marginTop: 0, marginBottom: 0 }}>Recent entries</h3><span className="muted">{recent.length} record{recent.length === 1 ? '' : 's'}</span></div>
-        <table>
+        <table className="mobile-cards">
           <thead>
             <tr><th>S.No.</th><th>Date</th><th>Time</th><th>Name</th><th>Place</th><th>Phone</th><th>Purpose</th>{isSuperAdmin && <th>Actions</th>}</tr>
           </thead>
           <tbody>
             {recent.map((r) => (
               <tr key={r.id}>
-                <td>{r.id}</td>
-                <td>{formatIstDateTime(r.visit_date, r.visit_time).slice(0, 10)}</td>
-                <td>{formatIstDateTime(r.visit_date, r.visit_time).slice(-8)}</td>
-                <td>{r.name}</td>
-                <td>{r.place}</td>
-                <td>{r.phone}</td>
-                <td>{r.purpose}</td>{isSuperAdmin && <td><button className="danger" onClick={() => deleteRecord(r.id)}>Delete</button></td>}
+                <td data-label="S.No.">{r.id}</td>
+                <td data-label="Date">{formatIstDateTime(r.visit_date, r.visit_time).slice(0, 10)}</td>
+                <td data-label="Time">{formatIstDateTime(r.visit_date, r.visit_time).slice(-8)}</td>
+                <td data-label="Name">{r.name}</td>
+                <td data-label="Place">{r.place || "—"}</td>
+                <td data-label="Phone">{r.phone || "—"}</td>
+                <td data-label="Purpose">{r.purpose}</td>{isSuperAdmin && <td data-label="Actions"><button className="danger" onClick={() => deleteRecord(r.id)}>Delete</button></td>}
               </tr>
             ))}
             {recent.length === 0 && <tr><td colSpan={isSuperAdmin ? 8 : 7} style={{ color: '#6b7280' }}>No entries yet.</td></tr>}
