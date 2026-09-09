@@ -27,7 +27,7 @@ function BrandingSection() {
         method: 'PUT',
         body: {
           orgName: form.org_name, logoPath: form.logo_path, address: form.address, phone: form.phone,
-          email: form.email, website: form.website, logoPosition: form.logo_position, reportHeader: form.report_header, reportFooter: form.report_footer
+          email: form.email, website: form.website, logoPosition: form.logo_position, faviconPath: form.favicon_path, reportHeader: form.report_header, reportFooter: form.report_footer
         }
       });
       setForm(data.branding);
@@ -49,6 +49,7 @@ function BrandingSection() {
         <div className="form-grid">
           <div><label>Organization Name *</label><input value={form.org_name || ''} onChange={(e) => update('org_name', e.target.value)} required /></div>
           <div><label>Logo path/URL</label><input value={form.logo_path || ''} onChange={(e) => update('logo_path', e.target.value)} /></div>
+          <div><label>Favicon path/URL</label><input value={form.favicon_path || ''} onChange={(e) => update('favicon_path', e.target.value)} placeholder="/favicon.ico" /></div>
           <div><label>Logo position</label><select value={form.logo_position || 'left'} onChange={(e) => update('logo_position', e.target.value)}><option value="left">Left</option><option value="right">Right</option></select></div>
           <div><label>Phone</label><input value={form.phone || ''} onChange={(e) => update('phone', e.target.value)} /></div>
           <div><label>Email</label><input value={form.email || ''} onChange={(e) => update('email', e.target.value)} /></div>

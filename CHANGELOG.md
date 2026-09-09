@@ -132,3 +132,10 @@
 - Added responsive, horizontally scrollable Settings tabs for mobile screens.
 - Preserved existing Settings functionality and permissions.
 - No database migration required.
+
+
+## 1.2.15
+- Added configurable Favicon path/URL to the Branding settings tab.
+- Applied the configured favicon across the application, including the login page.
+- Exposed only the non-sensitive favicon branding value through the public login branding endpoint.
+- Added database migration `007_favicon_branding.sql`.

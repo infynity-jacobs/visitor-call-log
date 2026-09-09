@@ -13,9 +13,9 @@ const router = express.Router();
 router.get('/public-branding', async (req, res, next) => {
   try {
     const result = await query(
-      'SELECT org_name, logo_path FROM branding_settings WHERE id = 1'
+      'SELECT org_name, logo_path, favicon_path FROM branding_settings WHERE id = 1'
     );
-    res.json({ branding: result.rows[0] || { org_name: '', logo_path: null } });
+    res.json({ branding: result.rows[0] || { org_name: '', logo_path: null, favicon_path: null } });
   } catch (err) {
     next(err);
   }

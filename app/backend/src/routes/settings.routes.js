@@ -33,13 +33,15 @@ router.put('/branding', requireAdmin, async (req, res, next) => {
     const reportHeader = b.reportHeader ? requireString(b.reportHeader, 'Report Header', { maxLen: 500 }) : null;
     const reportFooter = b.reportFooter ? requireString(b.reportFooter, 'Report Footer', { maxLen: 500 }) : null;
     const logoPosition = ['left', 'right'].includes(b.logoPosition) ? b.logoPosition : 'left';
+    const faviconPath = b.faviconPath ? requireString(b.faviconPath, 'Favicon path/URL', { maxLen: 500 }) : null;
+    const logoPath = b.logoPath ? requireString(b.logoPath, 'Logo path/URL', { maxLen: 500 }) : null;
     const result = await query(
       `UPDATE branding_settings SET
-         org_name = $1, logo_path = $2, address = $3, phone = $4,
-         email = $5, website = $6, report_header = $7, report_footer = $8, logo_position = $9,
+         org_name = $1, logo_path = $2, favicon_path = $3, address = $4, phone = $5,
+         email = $6, website = $7, report_header = $8, report_footer = $9, logo_position = $10,
          updated_at = now()
        WHERE id = 1 RETURNING *`,
-      [orgName, b.logoPath || null, b.address || null, phone,
+      [orgName, logoPath, faviconPath, b.address || null, phone,
         email, website, reportHeader, reportFooter, logoPosition]
     );
     res.json({ branding: result.rows[0] });
