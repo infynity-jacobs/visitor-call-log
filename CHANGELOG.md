@@ -116,3 +116,12 @@
 - Converted Global Search results to readable card-style records on mobile while preserving the desktop table presentation.
 - Added mobile field labels to search-result cards for clear identification of each value.
 - No database migration required.
+
+
+## 1.2.13
+- Reorganized the Settings module into tabbed sections instead of one long page.
+- Grouped Purpose, Enquiry Type, and Meeting Person configuration under Visitor Options.
+- Added dedicated Branding, Email / SMTP, Users, and Super Admin Data Import tabs.
+- Added responsive, horizontally scrollable Settings tabs for mobile screens.
+- Preserved existing Settings functionality and permissions.
+- No database migration required.

@@ -279,22 +279,55 @@ function UsersSection() {
 export default function Settings() {
   const { isSuperAdmin } = useAuth();
   const [version, setVersion] = useState('');
+  const [activeTab, setActiveTab] = useState('options');
 
   useEffect(() => {
     api.request('/settings/version').then((d) => setVersion(d.version)).catch(() => {});
   }, []);
 
+  const tabs = [
+    { id: 'options', label: 'Visitor Options' },
+    { id: 'branding', label: 'Branding' },
+    { id: 'smtp', label: 'Email / SMTP' },
+    { id: 'users', label: 'Users' },
+    ...(isSuperAdmin ? [{ id: 'import', label: 'Data Import' }] : []),
+  ];
+
   return (
-    <div>
+    <div className="settings-page">
       <h2>Settings</h2>
-      <OptionsManager title="Purpose Options" endpoint="/settings/purpose-options" />
-      <OptionsManager title="Enquiry Type Options" endpoint="/settings/enquiry-type-options" />
-      <OptionsManager title="Meeting Person Options" endpoint="/settings/meeting-person-options" />
-      <BrandingSection />
-      <SmtpSection />
-      <UsersSection />
-      {isSuperAdmin && <DataImport />}
-      <div className="card" style={{ color: '#6b7280', fontSize: '0.85rem' }}>Application version: {version}</div>
+
+      <div className="settings-tabs" role="tablist" aria-label="Settings sections">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`settings-panel-${tab.id}`}
+            className={`settings-tab ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div id={`settings-panel-${activeTab}`} role="tabpanel" className="settings-panel">
+        {activeTab === 'options' && (
+          <>
+            <OptionsManager title="Purpose Options" endpoint="/settings/purpose-options" />
+            <OptionsManager title="Enquiry Type Options" endpoint="/settings/enquiry-type-options" />
+            <OptionsManager title="Meeting Person Options" endpoint="/settings/meeting-person-options" />
+          </>
+        )}
+        {activeTab === 'branding' && <BrandingSection />}
+        {activeTab === 'smtp' && <SmtpSection />}
+        {activeTab === 'users' && <UsersSection />}
+        {activeTab === 'import' && isSuperAdmin && <DataImport />}
+      </div>
+
+      <div className="card settings-version">Application version: {version}</div>
     </div>
   );
 }

@@ -311,6 +311,41 @@ th { color: var(--muted); font-weight: 700; background: #f9fafb; }
 .report-preview { overflow-x:auto; margin-top:1rem; }
 
 
+
+/* v1.2.13 settings tabs */
+.settings-tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  padding: 0.35rem;
+  background: #eef1f6;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.settings-tab {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0.6rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.settings-tab:hover { background: #e3e8f0; color: var(--text); }
+.settings-tab.active {
+  background: white;
+  color: var(--primary);
+  border-color: #cfd8e5;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.settings-panel { min-width: 0; }
+.settings-version { color: #6b7280; font-size: 0.85rem; }
+
 /* v1.2.9 responsive/mobile enhancements */
 .mobile-menu-toggle { display: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
@@ -398,6 +433,21 @@ th { color: var(--muted); font-weight: 700; background: #f9fafb; }
   .login-org-name { font-size: 1.05rem; }
   .login-app-name { font-size: 0.8rem; }
   .password-card { max-width: 100%; }
+}
+
+@media (max-width: 767px) {
+  .settings-tabs {
+    margin-left: -0.1rem;
+    margin-right: -0.1rem;
+    padding: 0.3rem;
+    gap: 0.25rem;
+    border-radius: 9px;
+  }
+  .settings-tab {
+    min-height: 46px;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.88rem;
+  }
 }
 
 @media (max-width: 380px) {
