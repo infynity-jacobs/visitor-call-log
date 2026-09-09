@@ -1,3 +1,10 @@
+## 1.2.14
+
+- Replaced the combined Visitor Options Settings tab with three dedicated tabs: Purpose Options, Enquiry Type Options, and Meeting Person Options.
+- Each visitor option manager now has its own focused settings panel on desktop and mobile.
+- Preserved existing option management endpoints, permissions, ordering, enable/disable, and data behavior.
+- No database migration required.
+
 ## 1.2.11
 
 - Redesigned Global Search as a single integrated search field for desktop and mobile.

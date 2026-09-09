@@ -279,14 +279,16 @@ function UsersSection() {
 export default function Settings() {
   const { isSuperAdmin } = useAuth();
   const [version, setVersion] = useState('');
-  const [activeTab, setActiveTab] = useState('options');
+  const [activeTab, setActiveTab] = useState('purpose');
 
   useEffect(() => {
     api.request('/settings/version').then((d) => setVersion(d.version)).catch(() => {});
   }, []);
 
   const tabs = [
-    { id: 'options', label: 'Visitor Options' },
+    { id: 'purpose', label: 'Purpose Options' },
+    { id: 'enquiry', label: 'Enquiry Type Options' },
+    { id: 'meeting', label: 'Meeting Person Options' },
     { id: 'branding', label: 'Branding' },
     { id: 'smtp', label: 'Email / SMTP' },
     { id: 'users', label: 'Users' },
@@ -314,13 +316,9 @@ export default function Settings() {
       </div>
 
       <div id={`settings-panel-${activeTab}`} role="tabpanel" className="settings-panel">
-        {activeTab === 'options' && (
-          <>
-            <OptionsManager title="Purpose Options" endpoint="/settings/purpose-options" />
-            <OptionsManager title="Enquiry Type Options" endpoint="/settings/enquiry-type-options" />
-            <OptionsManager title="Meeting Person Options" endpoint="/settings/meeting-person-options" />
-          </>
-        )}
+        {activeTab === 'purpose' && <OptionsManager title="Purpose Options" endpoint="/settings/purpose-options" />}
+        {activeTab === 'enquiry' && <OptionsManager title="Enquiry Type Options" endpoint="/settings/enquiry-type-options" />}
+        {activeTab === 'meeting' && <OptionsManager title="Meeting Person Options" endpoint="/settings/meeting-person-options" />}
         {activeTab === 'branding' && <BrandingSection />}
         {activeTab === 'smtp' && <SmtpSection />}
         {activeTab === 'users' && <UsersSection />}
