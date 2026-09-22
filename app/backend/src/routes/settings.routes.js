@@ -50,6 +50,41 @@ router.put('/branding', requireAdmin, async (req, res, next) => {
   }
 });
 
+
+// ---------------------------------------------------------------------
+// Yeastar S50 CDR inspection (admin only)
+// ---------------------------------------------------------------------
+router.get('/s50-cdr', requireAdmin, async (req, res, next) => {
+  try {
+    const s50 = require('../services/s50.service');
+    const cfg = await s50.loadConfig();
+    res.json({ s50: s50.publicSettings(cfg) });
+  } catch (err) { next(err); }
+});
+
+router.put('/s50-cdr', requireAdmin, async (req, res, next) => {
+  try {
+    const s50 = require('../services/s50.service');
+    const saved = await s50.saveSettings(req.body || {});
+    res.json({ s50: saved });
+  } catch (err) { next(err); }
+});
+
+router.post('/s50-cdr/test', requireAdmin, async (req, res, next) => {
+  try {
+    const s50 = require('../services/s50.service');
+    const b = req.body || {};
+    const current = await s50.loadConfig();
+    const cfg = {
+      server: b.server || current?.server, api_protocol: b.apiProtocol || current?.api_protocol || 'https', api_port: Number(b.apiPort || current?.api_port || 8088),
+      api_version: b.apiVersion || current?.api_version || '2.0.0', api_username: b.apiUsername || current?.api_username, api_password: b.apiPassword || current?.api_password || '',
+      verify_tls: b.verifyTls === undefined ? !!current?.verify_tls : !!b.verifyTls,
+    };
+    const device = await s50.testConnection(cfg);
+    res.json({ success: true, message: 'S50 API connection succeeded.', device });
+  } catch (err) { next(err); }
+});
+
 // ---------------------------------------------------------------------
 // SMTP
 // ---------------------------------------------------------------------

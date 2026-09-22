@@ -1,4 +1,15 @@
-## 1.2.14
+# Changelog
+
+## 1.3.0
+- Reworked Call Log into a Yeastar S50 CDR inspection interface.
+- Added S50 CDR database storage with idempotent `callid` updates.
+- Added S50 API settings, connection test, manual sync, optional automatic sync, and IST date/time filtering.
+- Added server-side recording retrieval and browser playback without exposing PBX credentials.
+- Preserved the previous manual Call Log as a read-only archived dataset before S50 integration.
+- Added S50 CDR search to Global Search while leaving Visitor Register unchanged.
+- Added responsive S50 CDR desktop/mobile layouts.
+
+1.2.14
 
 - Replaced the combined Visitor Options Settings tab with three dedicated tabs: Purpose Options, Enquiry Type Options, and Meeting Person Options.
 - Each visitor option manager now has its own focused settings panel on desktop and mobile.

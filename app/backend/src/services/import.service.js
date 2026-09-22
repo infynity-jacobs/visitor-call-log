@@ -282,7 +282,7 @@ async function importWorkbook({ buffer, type, filename, userId }) {
         const utc = istToUtcClock(r.callDate, r.callTime);
         r = { ...r, callDate: utc.date, callTime: utc.time };
         await client.query(
-          `INSERT INTO call_logs(call_date,call_time,name,place,phone,reason,created_by,import_batch_id,source_sno,import_raw)
+          `INSERT INTO call_logs_archive(call_date,call_time,name,place,phone,reason,created_by,import_batch_id,source_sno,import_raw)
            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
           [r.callDate, r.callTime, r.name, r.place, r.phone, r.reason, userId, batch.id, r.sourceSno, JSON.stringify(r.importRaw)]
         );

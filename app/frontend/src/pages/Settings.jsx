@@ -64,6 +64,50 @@ function BrandingSection() {
   );
 }
 
+function S50CdrSection() {
+  const [form, setForm] = useState(null);
+  const [password, setPassword] = useState('');
+  const [message, setMessage] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+
+  const load = useCallback(async () => {
+    const data = await api.request('/settings/s50-cdr');
+    setForm(data.s50);
+  }, []);
+  useEffect(() => { load().catch((err) => setMessage({ type: 'error', text: err.message })); }, [load]);
+  function update(field, value) { setForm((f) => ({ ...f, [field]: value })); }
+  async function save(e) {
+    e.preventDefault(); setSaving(true); setMessage(null);
+    try {
+      const data = await api.request('/settings/s50-cdr', { method:'PUT', body:{
+        enabled: form.enabled, server: form.server, apiProtocol: form.api_protocol, apiPort: form.api_port,
+        apiVersion: form.api_version, apiUsername: form.api_username, verifyTls: form.verify_tls,
+        autoSync: form.auto_sync, autoSyncMinutes: form.auto_sync_minutes, ...(password ? {apiPassword:password} : {})
+      }});
+      setForm(data.s50); setPassword(''); setMessage({type:'success',text:'S50 CDR settings saved.'});
+    } catch(err){setMessage({type:'error',text:err.message});} finally{setSaving(false);}
+  }
+  async function test() {
+    setTesting(true); setMessage(null);
+    try { const data=await api.request('/settings/s50-cdr/test',{method:'POST',body:{server:form.server,apiProtocol:form.api_protocol,apiPort:form.api_port,apiVersion:form.api_version,apiUsername:form.api_username,apiPassword:password,verifyTls:form.verify_tls}}); setMessage({type:'success',text:`S50 API connection succeeded${data.device?.productname ? ` — ${data.device.productname}` : ''}.`}); }
+    catch(err){setMessage({type:'error',text:err.message});} finally{setTesting(false);}
+  }
+  if(!form) return <div className="card">Loading S50 settings…</div>;
+  return <div className="card"><h3 style={{marginTop:0}}>Yeastar S50 CDR</h3><p className="muted">Used only to import CDRs and retrieve recordings. This application does not place calls or control the PBX.</p>{message&&<div className={`alert ${message.type}`}>{message.text}</div>}<form onSubmit={save}><div className="form-grid">
+    <div><label>Enable S50 CDR</label><select value={form.enabled?'yes':'no'} onChange={e=>update('enabled',e.target.value==='yes')}><option value="no">Disabled</option><option value="yes">Enabled</option></select></div>
+    <div><label>S50 Server / IP *</label><input value={form.server||''} onChange={e=>update('server',e.target.value)} placeholder="192.168.x.x" required /></div>
+    <div><label>API Protocol</label><select value={form.api_protocol||'https'} onChange={e=>update('api_protocol',e.target.value)}><option value="https">HTTPS</option><option value="http">HTTP</option></select></div>
+    <div><label>API Port</label><input type="number" min="1" max="65535" value={form.api_port||8088} onChange={e=>update('api_port',e.target.value)} /></div>
+    <div><label>API Version</label><input value={form.api_version||'2.0.0'} onChange={e=>update('api_version',e.target.value)} /></div>
+    <div><label>API Username</label><input value={form.api_username||''} onChange={e=>update('api_username',e.target.value)} /></div>
+    <div><label>API Password</label><input type="password" placeholder="Leave blank to keep current" value={password} onChange={e=>setPassword(e.target.value)} /></div>
+    <div><label>Verify TLS certificate</label><select value={form.verify_tls?'yes':'no'} onChange={e=>update('verify_tls',e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></div>
+    <div><label>Automatic CDR sync</label><select value={form.auto_sync?'yes':'no'} onChange={e=>update('auto_sync',e.target.value==='yes')}><option value="no">Manual only</option><option value="yes">Enabled</option></select></div>
+    <div><label>Sync interval (minutes)</label><input type="number" min="5" max="1440" value={form.auto_sync_minutes||15} onChange={e=>update('auto_sync_minutes',e.target.value)} /></div>
+  </div><div className="actions"><button type="submit" className="primary" disabled={saving}>{saving?'Saving…':'Save S50 settings'}</button><button type="button" className="secondary" onClick={test} disabled={testing||!form.server||!form.api_username}>{testing?'Testing…':'Test Connection'}</button></div></form>{form.last_sync_at&&<div className="field-help" style={{marginTop:'1rem'}}>Last sync: {String(form.last_sync_at).replace('T',' ').slice(0,19)} · {form.last_sync_status||'—'} · {form.last_sync_message||''}</div>}</div>;
+}
+
 function SmtpSection() {
   const [form, setForm] = useState(null);
   const [password, setPassword] = useState('');
@@ -291,6 +335,7 @@ export default function Settings() {
     { id: 'enquiry', label: 'Enquiry Type Options' },
     { id: 'meeting', label: 'Meeting Person Options' },
     { id: 'branding', label: 'Branding' },
+    { id: 's50', label: 'S50 CDR' },
     { id: 'smtp', label: 'Email / SMTP' },
     { id: 'users', label: 'Users' },
     ...(isSuperAdmin ? [{ id: 'import', label: 'Data Import' }] : []),
@@ -321,6 +366,7 @@ export default function Settings() {
         {activeTab === 'enquiry' && <OptionsManager title="Enquiry Type Options" endpoint="/settings/enquiry-type-options" />}
         {activeTab === 'meeting' && <OptionsManager title="Meeting Person Options" endpoint="/settings/meeting-person-options" />}
         {activeTab === 'branding' && <BrandingSection />}
+        {activeTab === 's50' && <S50CdrSection />}
         {activeTab === 'smtp' && <SmtpSection />}
         {activeTab === 'users' && <UsersSection />}
         {activeTab === 'import' && isSuperAdmin && <DataImport />}
