@@ -45,7 +45,19 @@ app.use('/api/import', importRoutes);
 
 // S50 CDR is intentionally inspection-only. Optional background sync never controls calls.
 const s50Service = require('./services/s50.service');
-setInterval(() => { s50Service.autoSyncOnce().catch((err) => console.warn('[s50] auto-sync:', err.message)); }, 5 * 60 * 1000).unref();
+setInterval(async () => {
+  try {
+    const result = await s50Service.autoSyncOnce();
+
+    if (!result?.skipped) {
+      console.log(
+        `[s50] auto-sync complete: fetched=${result.fetched} inserted=${result.inserted} updated=${result.updated} ignored=${result.ignored}`
+      );
+    }
+  } catch (err) {
+    console.warn('[s50] auto-sync:', err.message);
+  }
+}, 5 * 60 * 1000).unref();
 app.use('/api/settings/purpose-options', buildOptionsRouter('purpose_options'));
 app.use('/api/settings/enquiry-type-options', buildOptionsRouter('enquiry_type_options'));
 app.use('/api/settings/meeting-person-options', buildOptionsRouter('meeting_person_options'));

@@ -260,21 +260,60 @@ async function saveSettings(body) {
 
 function publicSettings(row) { return row ? { ...row, api_password_enc: undefined } : null; }
 
+let autoSyncRunning = false;
+
 async function autoSyncOnce() {
-  const cfg = await loadConfig();
-  if (!cfg?.enabled || !cfg.auto_sync) return { skipped: true };
-  if (cfg.last_sync_at) {
-    const elapsed = Date.now() - new Date(cfg.last_sync_at).getTime();
-    if (elapsed < Math.max(5, Number(cfg.auto_sync_minutes || 15)) * 60000) return { skipped: true };
+  if (autoSyncRunning) {
+    return { skipped: true, reason: 'already_running' };
   }
-  const range = (() => {
-    const now = new Date();
-    const ist = new Date(now.getTime() + 5.5 * 3600 * 1000);
-    const start = new Date(ist.getTime() - Math.max(1, Number(cfg.auto_sync_minutes || 15)) * 60000 * 2);
-    const fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
-    return { start: fmt(start), end: fmt(ist) };
-  })();
-  return syncRange(range.start, range.end);
+
+  autoSyncRunning = true;
+
+  try {
+    const cfg = await loadConfig();
+
+    if (!cfg?.enabled || !cfg.auto_sync) {
+      return { skipped: true, reason: 'disabled' };
+    }
+
+    if (cfg.last_sync_at) {
+      const elapsed = Date.now() - new Date(cfg.last_sync_at).getTime();
+      if (
+        elapsed <
+        Math.max(5, Number(cfg.auto_sync_minutes || 15)) * 60000
+      ) {
+        return { skipped: true, reason: 'interval_not_reached' };
+      }
+    }
+
+    const range = (() => {
+      const now = new Date();
+      const ist = new Date(now.getTime() + 5.5 * 3600 * 1000);
+      const start = new Date(
+        ist.getTime() -
+          Math.max(1, Number(cfg.auto_sync_minutes || 15)) * 60000 * 2
+      );
+      const fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
+      return { start: fmt(start), end: fmt(ist) };
+    })();
+
+    try {
+      return await syncRange(range.start, range.end);
+    } catch (err) {
+      await query(
+        `UPDATE s50_cdr_settings
+         SET last_sync_at = now(),
+             last_sync_status = $1,
+             last_sync_message = $2,
+             updated_at = now()
+         WHERE id = 1`,
+        ['error', err.message]
+      );
+      throw err;
+    }
+  } finally {
+    autoSyncRunning = false;
+  }
 }
 
 async function listExtensions() {
