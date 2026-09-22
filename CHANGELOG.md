@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.3
+
+- Fixed S50 CDR Reset Filters so it immediately reloads the default date-range results.
+- Preserved existing S50 CDR filtering, search, pagination, synchronization, and recording playback behavior.
+
 ## 1.3.2
 
 - Added a forward-only migration to seed the required S50 CDR settings singleton row when it is missing.

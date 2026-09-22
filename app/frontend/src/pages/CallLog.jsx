@@ -34,10 +34,11 @@ function S50CdrView() {
   const [audioUrls, setAudioUrls] = useState({});
   const pageSize = 100;
 
-  const load = useCallback(async (nextOffset = offset) => {
+  const load = useCallback(async (nextOffset = offset, filterOverride = null) => {
     setBusy(true); setMessage(null);
     try {
-      const q = new URLSearchParams({ ...filters, limit: String(pageSize), offset: String(nextOffset) });
+      const activeFilters = filterOverride || filters;
+      const q = new URLSearchParams({ ...activeFilters, limit: String(pageSize), offset: String(nextOffset) });
       const data = await api.request(`/s50?${q.toString()}`);
       setRecords(data.records); setTotal(data.total); setOffset(nextOffset);
     } catch (err) { setMessage({ type: 'error', text: err.message }); }
@@ -91,7 +92,11 @@ function S50CdrView() {
         <div><label>Extension</label><input value={filters.extension} onChange={(e) => update('extension', e.target.value)} placeholder="e.g. 150" /></div>
         <div><label>Search</label><input value={filters.search} onChange={(e) => update('search', e.target.value)} placeholder="Phone, trunk, DID..." onKeyDown={(e) => { if (e.key === 'Enter') load(0); }} /></div>
       </div>
-      <div className="actions"><button className="secondary" onClick={() => load(0)} disabled={busy}>{busy ? 'Loading…' : 'Search'}</button><button className="secondary" onClick={() => { setFilters({ startDateTime: currentIstInput(-24*60), endDateTime: currentIstInput(), direction:'all', status:'all', extension:'', search:'' }); setOffset(0); }}>Reset Filters</button></div>
+      <div className="actions"><button className="secondary" onClick={() => load(0)} disabled={busy}>{busy ? 'Loading…' : 'Search'}</button><button className="secondary" onClick={() => {
+        const defaults = { startDateTime: currentIstInput(-24*60), endDateTime: currentIstInput(), direction:'all', status:'all', extension:'', search:'' };
+        setFilters(defaults);
+        load(0, defaults);
+      }} disabled={busy}>Reset Filters</button></div>
     </div>
 
     <div className="card">
