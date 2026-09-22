@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.2
+
+- Added a forward-only migration to seed the required S50 CDR settings singleton row when it is missing.
+- Preserved existing S50 CDR settings when the row already exists.
+
 ## 1.3.1
 
 - Fixed S50 CDR Settings loading when the authenticated settings endpoint is returned with HTTP 304 Not Modified.
