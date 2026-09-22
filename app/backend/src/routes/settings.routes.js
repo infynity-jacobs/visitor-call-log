@@ -56,6 +56,7 @@ router.put('/branding', requireAdmin, async (req, res, next) => {
 // ---------------------------------------------------------------------
 router.get('/s50-cdr', requireAdmin, async (req, res, next) => {
   try {
+    res.set('Cache-Control', 'no-store');
     const s50 = require('../services/s50.service');
     const cfg = await s50.loadConfig();
     res.json({ s50: s50.publicSettings(cfg) });

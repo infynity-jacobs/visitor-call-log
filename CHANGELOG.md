@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.1
+
+- Fixed S50 CDR Settings loading when the authenticated settings endpoint is returned with HTTP 304 Not Modified.
+- Disabled browser caching for the S50 CDR settings endpoint.
+- Added a proper S50 CDR Settings loading/error state with Retry handling.
+- Visitor Register and existing archived Call Log functionality unchanged.
+
 ## 1.3.0
 - Reworked Call Log into a Yeastar S50 CDR inspection interface.
 - Added S50 CDR database storage with idempotent `callid` updates.

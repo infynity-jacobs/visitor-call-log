@@ -70,12 +70,19 @@ function S50CdrSection() {
   const [message, setMessage] = useState(null);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     const data = await api.request('/settings/s50-cdr');
     setForm(data.s50);
   }, []);
-  useEffect(() => { load().catch((err) => setMessage({ type: 'error', text: err.message })); }, [load]);
+
+  useEffect(() => {
+    setLoading(true);
+    load()
+      .catch((err) => setMessage({ type: 'error', text: err.message }))
+      .finally(() => setLoading(false));
+  }, [load]);
   function update(field, value) { setForm((f) => ({ ...f, [field]: value })); }
   async function save(e) {
     e.preventDefault(); setSaving(true); setMessage(null);
@@ -93,7 +100,24 @@ function S50CdrSection() {
     try { const data=await api.request('/settings/s50-cdr/test',{method:'POST',body:{server:form.server,apiProtocol:form.api_protocol,apiPort:form.api_port,apiVersion:form.api_version,apiUsername:form.api_username,apiPassword:password,verifyTls:form.verify_tls}}); setMessage({type:'success',text:`S50 API connection succeeded${data.device?.productname ? ` — ${data.device.productname}` : ''}.`}); }
     catch(err){setMessage({type:'error',text:err.message});} finally{setTesting(false);}
   }
-  if(!form) return <div className="card">Loading S50 settings…</div>;
+  if (loading) {
+    return <div className="card">Loading S50 settings…</div>;
+  }
+
+  if (!form) {
+    return (
+      <div className="card">
+        <div className="alert error">
+          {message?.text || 'Unable to load S50 CDR settings.'}
+        </div>
+        <div className="actions">
+          <button type="button" className="secondary" onClick={load}>
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
   return <div className="card"><h3 style={{marginTop:0}}>Yeastar S50 CDR</h3><p className="muted">Used only to import CDRs and retrieve recordings. This application does not place calls or control the PBX.</p>{message&&<div className={`alert ${message.type}`}>{message.text}</div>}<form onSubmit={save}><div className="form-grid">
     <div><label>Enable S50 CDR</label><select value={form.enabled?'yes':'no'} onChange={e=>update('enabled',e.target.value==='yes')}><option value="no">Disabled</option><option value="yes">Enabled</option></select></div>
     <div><label>S50 Server / IP *</label><input value={form.server||''} onChange={e=>update('server',e.target.value)} placeholder="192.168.x.x" required /></div>
