@@ -40,7 +40,7 @@ router.get('/', async (req, res, next) => {
     // Super Admin / Admin / Manager: all call types.
     // Normal users: inbound and outbound only.
     if (req.user?.role === 'user') {
-      where.push(`c.call_type IN ('inbound', 'outbound')`);
+      where.push(`c.call_type IN ('inbound', 'outbound', 'transfer')`);
     }
 
     if (req.query.startDateTime) {

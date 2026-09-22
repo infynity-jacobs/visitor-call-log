@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.5.2
+
+- Replaced visible S50 terminology in the frontend with PBX terminology while preserving existing internal API, database, and integration identifiers.
+- Updated Call Log, Settings, and Global Search labels to use PBX CDR / PBX settings terminology.
+- Repaired the Reports Call Records section to use the current PBX CDR dataset instead of the retired manual Call Log endpoint.
+- Added PBX CDR report preview columns for Date, Time, Type, From, To, Trunk, Duration, Talk Time, Status, and Recording.
+- Applied the existing PBX role-based visibility policy to reports: Super Admin, Admin, and Manager can view all PBX calls; Normal users cannot view Internal calls.
+- Added extension-name enrichment to PBX reports with fallback to the original PBX number when no cached extension name is available.
+- Preserved the archived manual Call Log separately from the current PBX CDR reporting dataset.
+- Preserved existing Visitors Register reporting and PBX Auto Sync functionality.
+- Added support for the PBX Transfer CDR type found in historical PBX records.
+- Added a forward-only migration extending the normalized PBX call classification to include Transfer.
+
+
 ## 1.5.1
 
 - Added Visitor Register Edit for all authenticated users.

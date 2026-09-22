@@ -66,7 +66,7 @@ export function GlobalSearch() {
             <tbody>
               {results.map((r) => (
                 <tr key={`${r.type}-${r.id}`} className="clickable-row" onClick={() => openRecord(r)} title="Open record">
-                  <td data-label="Module"><span className="badge">{r.type === 'visitor' ? 'Visitor' : r.type === 's50' ? 'S50 CDR' : 'Archived Call Log'}</span></td>
+                  <td data-label="Module"><span className="badge">{r.type === 'visitor' ? 'Visitor' : r.type === 's50' ? 'PBX CDR' : 'Archived Call Log'}</span></td>
                   <td data-label="Date &amp; Time (IST)">{formatIstDateTime(r.record_date, r.record_time)}</td>
                   <td data-label="Name">{r.name}</td>
                   <td data-label="Place">{r.place || '—'}</td>

@@ -156,6 +156,7 @@ function normalizeRow(row) {
   if (normalizedType === 'internal') callType = 'internal';
   else if (normalizedType === 'inbound') callType = 'inbound';
   else if (normalizedType === 'outbound') callType = 'outbound';
+  else if (normalizedType === 'transfer') callType = 'transfer';
 
   return {
     callId: String(row.callid || row.call_id || '').trim(),

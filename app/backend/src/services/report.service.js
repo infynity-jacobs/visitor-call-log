@@ -2,7 +2,7 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const fs = require('fs/promises');
 const { query } = require('../db/pool');
-const { formatIstDateTime } = require('../utils/timezone');
+const { formatIstDateTime, utcBoundsForIstDate, nextIstDate } = require('../utils/timezone');
 
 async function getBranding() {
   const result = await query('SELECT * FROM branding_settings WHERE id = 1');
@@ -67,6 +67,117 @@ const CALLLOG_COLUMNS = [
   { header: 'Phone', key: 'phone', width: 15 },
   { header: 'Reason', key: 'reason', width: 40 }
 ];
+
+
+const PBX_COLUMNS = [
+  { header: 'S.No.', key: 'report_sno', width: 8 },
+  { header: 'Date', key: 'call_date', width: 12 },
+  { header: 'Time', key: 'call_time', width: 10 },
+  { header: 'Type', key: 'call_type_display', width: 12 },
+  { header: 'From', key: 'from_display', width: 24 },
+  { header: 'To', key: 'to_display', width: 24 },
+  { header: 'Trunk', key: 'trunk', width: 16 },
+  { header: 'Duration', key: 'duration_display', width: 12 },
+  { header: 'Talk Time', key: 'talk_duration_display', width: 12 },
+  { header: 'Status', key: 'status', width: 14 },
+  { header: 'Recording', key: 'recording_available', width: 12 }
+];
+
+function durationText(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '—';
+
+  const hours = Math.floor(n / 3600);
+  const minutes = Math.floor((n % 3600) / 60);
+  const seconds = n % 60;
+
+  return [
+    String(hours).padStart(2, '0'),
+    String(minutes).padStart(2, '0'),
+    String(seconds).padStart(2, '0')
+  ].join(':');
+}
+
+async function buildPbxRows({ mode = 'all', date, startDate, endDate } = {}, userRole) {
+  const params = [];
+  const where = [];
+
+  // Same visibility policy as the PBX CDR screen:
+  // Super Admin / Admin / Manager: all call types.
+  // Normal users: inbound, outbound, and transfer; internal calls remain hidden.
+  if (userRole === 'user') {
+    where.push(`c.call_type IN ('inbound', 'outbound', 'transfer')`);
+  }
+
+  if (mode === 'single' && date) {
+    const start = utcBoundsForIstDate(date);
+    const end = utcBoundsForIstDate(nextIstDate(date));
+
+    params.push(
+      `${start.date} ${start.time}`,
+      `${end.date} ${end.time}`
+    );
+
+    where.push(
+      `(c.start_at >= $${params.length - 1}::timestamp
+        AND c.start_at < $${params.length}::timestamp)`
+    );
+  } else if (mode === 'range' && startDate && endDate) {
+    const start = utcBoundsForIstDate(startDate);
+    const end = utcBoundsForIstDate(nextIstDate(endDate));
+
+    params.push(
+      `${start.date} ${start.time}`,
+      `${end.date} ${end.time}`
+    );
+
+    where.push(
+      `(c.start_at >= $${params.length - 1}::timestamp
+        AND c.start_at < $${params.length}::timestamp)`
+    );
+  }
+
+  const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+  const result = await query(`
+    SELECT
+      c.start_at::date AS call_date,
+      c.start_at::time AS call_time,
+      c.call_type,
+      c.call_from,
+      c.call_to,
+      ef.username AS from_name,
+      et.username AS to_name,
+      c.trunk,
+      c.duration_seconds,
+      c.talk_duration_seconds,
+      c.status,
+      c.recording
+    FROM s50_call_logs c
+    LEFT JOIN s50_extensions ef
+      ON ef.extension_number = c.call_from
+    LEFT JOIN s50_extensions et
+      ON et.extension_number = c.call_to
+    ${clause}
+    ORDER BY c.start_at DESC, c.id DESC
+  `, params);
+
+  return result.rows.map((row) => ({
+    ...row,
+    call_type_display: row.call_type
+      ? String(row.call_type).charAt(0).toUpperCase() + String(row.call_type).slice(1)
+      : '—',
+    from_display: row.from_name
+      ? `${row.from_name} (${row.call_from})`
+      : (row.call_from || '—'),
+    to_display: row.to_name
+      ? `${row.to_name} (${row.call_to})`
+      : (row.call_to || '—'),
+    duration_display: durationText(row.duration_seconds),
+    talk_duration_display: durationText(row.talk_duration_seconds),
+    recording_available: row.recording ? 'Available' : '—'
+  }));
+}
 
 function combinedVisitorDetail(row) {
   return row.purpose_details || row.enquiry_details || row.complaint_details || row.purchase_details
@@ -242,5 +353,7 @@ module.exports = {
   formatFilterLabel,
   VISITOR_COLUMNS,
   CALLLOG_COLUMNS,
-  buildVisitorRows
+  PBX_COLUMNS,
+  buildVisitorRows,
+  buildPbxRows
 };

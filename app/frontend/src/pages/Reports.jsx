@@ -28,8 +28,7 @@ export default function Reports() {
     setBusy(true); setMessage(null);
     try {
       const params = new URLSearchParams({ ...filterParams(), limit: '500', offset: '0' });
-      const endpoint = type === 'visitors' ? '/visitors' : '/calllog';
-      const data = await api.request(`${endpoint}?${params.toString()}`);
+      const data = await api.request(`/reports/${type}/records?${params.toString()}`);
       setRecords(data.records || []);
       setMessage({ type: 'success', text: `${data.records?.length || 0} record(s) found.` });
     } catch (err) { setMessage({ type: 'error', text: err.message }); }
@@ -65,7 +64,7 @@ export default function Reports() {
         <h3 style={{ marginTop: 0 }}>Filter Records</h3>
         <div className="tabs">
           <button className={isVisitor ? 'active' : ''} onClick={() => { setType('visitors'); setRecords([]); }}>Visitors Register</button>
-          <button className={!isVisitor ? 'active' : ''} onClick={() => { setType('calllog'); setRecords([]); }}>Call Log</button>
+          <button className={!isVisitor ? 'active' : ''} onClick={() => { setType('calllog'); setRecords([]); }}>PBX CDR</button>
         </div>
         <div className="tabs">
           <button className={mode === 'all' ? 'active' : ''} onClick={() => setMode('all')}>All records</button>
@@ -84,17 +83,74 @@ export default function Reports() {
       </div>
 
       {records.length > 0 && <div className="card report-preview">
-        <div className="section-heading"><h3 style={{ margin: 0 }}>{isVisitor ? 'Visitors Register' : 'Call Log'} — Filtered Records</h3><span className="muted">{records.length} record{records.length === 1 ? '' : 's'}</span></div>
-        <table className="mobile-cards report-table"><thead><tr>{isVisitor ? <><th>S.No.</th><th>Date</th><th>Time</th><th>Name</th><th>Place</th><th>Phone</th><th>Purpose</th></> : <><th>S.No.</th><th>Date</th><th>Time</th><th>Name</th><th>Place</th><th>Phone</th><th>Reason</th></>}</tr></thead>
-          <tbody>{records.map((r, i) => { const dt = formatIstDateTime(isVisitor ? r.visit_date : r.call_date, isVisitor ? r.visit_time : r.call_time); return <tr key={r.id}>
-            <td data-label="S.No.">{i + 1}</td>
-            <td data-label="Date">{dt.slice(0,10)}</td>
-            <td data-label="Time">{dt.slice(11,19)}</td>
-            <td data-label="Name">{r.name}</td>
-            <td data-label="Place">{r.place || '—'}</td>
-            <td data-label="Phone">{r.phone || '—'}</td>
-            <td data-label={isVisitor ? 'Purpose' : 'Reason'}>{isVisitor ? r.purpose : r.reason}</td>
-          </tr>; })}</tbody>
+        <div className="section-heading"><h3 style={{ margin: 0 }}>{isVisitor ? 'Visitors Register' : 'PBX CDR'} — Filtered Records</h3><span className="muted">{records.length} record{records.length === 1 ? '' : 's'}</span></div>
+        <table className="mobile-cards report-table">
+          <thead>
+            <tr>
+              {isVisitor ? (
+                <>
+                  <th>S.No.</th>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Name</th>
+                  <th>Place</th>
+                  <th>Phone</th>
+                  <th>Purpose</th>
+                </>
+              ) : (
+                <>
+                  <th>S.No.</th>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Type</th>
+                  <th>From</th>
+                  <th>To</th>
+                  <th>Trunk</th>
+                  <th>Duration</th>
+                  <th>Talk Time</th>
+                  <th>Status</th>
+                  <th>Recording</th>
+                </>
+              )}
+            </tr>
+          </thead>
+
+          <tbody>
+            {records.map((r, i) => {
+              const dt = formatIstDateTime(
+                isVisitor ? r.visit_date : r.call_date,
+                isVisitor ? r.visit_time : r.call_time
+              );
+
+              return (
+                <tr key={r.id || `${r.call_id}-${i}`}>
+                  <td data-label="S.No.">{i + 1}</td>
+                  <td data-label="Date">{dt.slice(0, 10)}</td>
+                  <td data-label="Time">{dt.slice(11, 19)}</td>
+
+                  {isVisitor ? (
+                    <>
+                      <td data-label="Name">{r.name}</td>
+                      <td data-label="Place">{r.place || '—'}</td>
+                      <td data-label="Phone">{r.phone || '—'}</td>
+                      <td data-label="Purpose">{r.purpose}</td>
+                    </>
+                  ) : (
+                    <>
+                      <td data-label="Type">{r.call_type_display}</td>
+                      <td data-label="From">{r.from_display}</td>
+                      <td data-label="To">{r.to_display}</td>
+                      <td data-label="Trunk">{r.trunk || '—'}</td>
+                      <td data-label="Duration">{r.duration_display}</td>
+                      <td data-label="Talk Time">{r.talk_duration_display}</td>
+                      <td data-label="Status">{r.status || '—'}</td>
+                      <td data-label="Recording">{r.recording_available}</td>
+                    </>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
         </table>
       </div>}
 

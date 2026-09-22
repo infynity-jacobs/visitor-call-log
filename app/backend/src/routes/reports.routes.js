@@ -1,7 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../middleware/auth');
 const visitorsService = require('../services/visitors.service');
-const calllogService = require('../services/calllog.service');
 const reportService = require('../services/report.service');
 const emailService = require('../services/email.service');
 const { validateEmail, requireString, validateDateFilter } = require('../utils/validators');
@@ -10,26 +9,36 @@ const { ValidationError } = require('../middleware/errorHandler');
 const router = express.Router();
 router.use(authenticate);
 
-async function loadDataset(type, filterParams) {
+async function loadDataset(type, filterParams, userRole) {
   if (type === 'visitors') {
     const records = await visitorsService.list({ ...filterParams, limit: 100000, offset: 0 });
-    return { rows: await reportService.buildVisitorRows(records), columns: reportService.VISITOR_COLUMNS };
+    return {
+      rows: await reportService.buildVisitorRows(records),
+      columns: reportService.VISITOR_COLUMNS
+    };
   }
-  if (type === 'calllog') {
-    const records = await calllogService.list({ ...filterParams, limit: 100000, offset: 0 });
-    return { rows: records, columns: reportService.CALLLOG_COLUMNS };
+
+  // Keep the historical API key "calllog" for compatibility, but
+  // report the current PBX CDR dataset instead of the archived manual log.
+  if (type === 'calllog' || type === 'pbx') {
+    const rows = await reportService.buildPbxRows(filterParams, userRole);
+    return {
+      rows,
+      columns: reportService.PBX_COLUMNS
+    };
   }
+
   throw new ValidationError('Unknown report type. Use "visitors" or "calllog".');
 }
 
 function titleFor(type) {
-  return type === 'visitors' ? 'Visitors Register Report' : 'Call Log Report';
+  return type === 'visitors' ? 'Visitors Register Report' : 'PBX CDR Report';
 }
 
 router.get('/:type/records', async (req, res, next) => {
   try {
     const filter = validateDateFilter(req.query);
-    const { rows, columns } = await loadDataset(req.params.type, filter);
+    const { rows, columns } = await loadDataset(req.params.type, filter, req.user?.role);
     res.json({ type: req.params.type, filter, columns: columns.map((c) => c.header), records: rows.map((r, index) => ({ ...r, report_sno: index + 1 })) });
   } catch (err) { next(err); }
 });
@@ -38,7 +47,7 @@ router.get('/:type/:format', async (req, res, next) => {
   try {
     const { type, format } = req.params;
     const filter = validateDateFilter(req.query);
-    const { rows, columns } = await loadDataset(type, filter);
+    const { rows, columns } = await loadDataset(type, filter, req.user?.role);
     const filterLabel = reportService.formatFilterLabel(filter);
     const title = titleFor(type);
 
@@ -69,7 +78,7 @@ router.post('/:type/email', async (req, res, next) => {
     const recipient = validateEmail(to, 'Recipient email', { optional: false });
     const emailSubject = requireString(subject, 'Subject', { optional: true }) || titleFor(type);
 
-    const { rows, columns } = await loadDataset(type, filter);
+    const { rows, columns } = await loadDataset(type, filter, req.user?.role);
     const filterLabel = reportService.formatFilterLabel(filter);
     const title = titleFor(type);
 
