@@ -6,4 +6,8 @@ INSERT INTO s50_cdr_settings (id)
 VALUES (1)
 ON CONFLICT (id) DO NOTHING;
 
+INSERT INTO schema_migrations (version)
+VALUES ('009_seed_s50_cdr_settings')
+ON CONFLICT DO NOTHING;
+
 COMMIT;
