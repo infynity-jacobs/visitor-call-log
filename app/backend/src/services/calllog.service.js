@@ -24,7 +24,7 @@ function buildDateFilter({ mode, date, startDate, endDate }, paramOffset = 1) {
 
 async function create(data) {
   const sql = `
-    INSERT INTO call_logs (call_date, call_time, name, place, phone, reason, created_by, idempotency_key)
+    INSERT INTO call_logs_archive (call_date, call_time, name, place, phone, reason, created_by, idempotency_key)
     VALUES (COALESCE($1::date, (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date),
             COALESCE($2::time, (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::time), $3, $4, $5, $6, $7, $8)
     ON CONFLICT (idempotency_key) DO NOTHING
@@ -36,7 +36,7 @@ async function create(data) {
   ];
   const result = await query(sql, params);
   if (result.rows.length === 0 && data.idempotencyKey) {
-    const existing = await query(`SELECT ${COLUMNS} FROM call_logs WHERE idempotency_key = $1`, [data.idempotencyKey]);
+    const existing = await query(`SELECT ${COLUMNS} FROM call_logs_archive WHERE idempotency_key = $1`, [data.idempotencyKey]);
     return { record: existing.rows[0], duplicate: true };
   }
   return { record: result.rows[0], duplicate: false };
@@ -47,7 +47,7 @@ async function list({ mode = 'all', date, startDate, endDate, limit = 500, offse
   const limitIdx = params.length + 1;
   const offsetIdx = params.length + 2;
   const sql = `
-    SELECT ${COLUMNS} FROM call_logs
+    SELECT ${COLUMNS} FROM call_logs_archive
     ${clause}
     ORDER BY call_date DESC, call_time DESC, id DESC
     LIMIT $${limitIdx} OFFSET $${offsetIdx}
@@ -57,7 +57,7 @@ async function list({ mode = 'all', date, startDate, endDate, limit = 500, offse
 }
 
 async function getById(id) {
-  const result = await query(`SELECT ${COLUMNS} FROM call_logs WHERE id = $1`, [id]);
+  const result = await query(`SELECT ${COLUMNS} FROM call_logs_archive WHERE id = $1`, [id]);
   return result.rows[0] || null;
 }
 

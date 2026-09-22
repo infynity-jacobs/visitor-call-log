@@ -504,3 +504,54 @@ th { color: var(--muted); font-weight: 700; background: #f9fafb; }
 @media (max-width: 380px) {
   .report-preview table.report-table td { grid-template-columns: 5.5rem minmax(0, 1fr); }
 }
+
+/* S50 CDR / archived Call Log */
+.calllog-tabs { display:flex; gap:.4rem; margin-bottom:1rem; padding:.35rem; background:#eef1f6; border:1px solid var(--border); border-radius:10px; overflow-x:auto; }
+.calllog-tabs button { flex:0 0 auto; min-height:44px; padding:.6rem 1rem; border:1px solid transparent; border-radius:7px; background:transparent; color:var(--muted); font-weight:800; cursor:pointer; white-space:nowrap; }
+.calllog-tabs button.active { background:white; color:#166534; border-color:#cfd8e5; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.s50-filter-card { border-top:4px solid #22c55e; }
+.s50-filters { grid-template-columns: repeat(auto-fit,minmax(210px,1fr)); }
+.s50-cdr-table th { white-space:nowrap; }
+.s50-cdr-table td { vertical-align:middle; }
+.cdr-direction { font-weight:800; }
+.cdr-direction.inbound { color:#166534; }
+.cdr-direction.outbound { color:#1d4ed8; }
+.cdr-direction.internal { color:#7c3aed; }
+.cdr-recording-cell { display:flex; flex-direction:column; gap:.4rem; min-width:145px; }
+.play-recording { min-height:38px !important; padding:.45rem .7rem !important; }
+.cdr-recording-cell audio { width:100%; min-width:180px; }
+.pagination { display:flex; align-items:center; justify-content:center; gap:1rem; margin-top:1rem; }
+
+@media (max-width:767px) {
+  .calllog-tabs { margin-left:-.1rem; margin-right:-.1rem; }
+  .s50-cdr-table td[data-label="Recording"] { display:block; }
+  .s50-cdr-table td[data-label="Recording"]::before { display:block; margin-bottom:.35rem; }
+  .cdr-recording-cell { min-width:0; }
+  .pagination { gap:.5rem; justify-content:space-between; }
+  .pagination button { min-height:44px; }
+}
+
+/* S50 CDR / archived Call Log */
+.calllog-tabs { display:flex; gap:.4rem; margin-bottom:1rem; padding:.35rem; background:#eef1f6; border:1px solid var(--border); border-radius:10px; overflow-x:auto; }
+.calllog-tabs button { flex:0 0 auto; min-height:44px; padding:.6rem 1rem; border:1px solid transparent; border-radius:7px; background:transparent; color:var(--muted); font-weight:800; cursor:pointer; white-space:nowrap; }
+.calllog-tabs button.active { background:white; color:#166534; border-color:#cfd8e5; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.s50-filter-card { border-top:4px solid #22c55e; }
+.s50-filters { grid-template-columns: repeat(auto-fit,minmax(210px,1fr)); }
+.s50-cdr-table th { white-space:nowrap; }
+.s50-cdr-table td { vertical-align:middle; }
+.cdr-direction { font-weight:800; }
+.cdr-direction.inbound { color:#166534; }
+.cdr-direction.outbound { color:#1d4ed8; }
+.cdr-direction.internal { color:#7c3aed; }
+.cdr-recording-cell { display:flex; flex-direction:column; gap:.4rem; min-width:145px; }
+.play-recording { min-height:38px !important; padding:.45rem .7rem !important; }
+.cdr-recording-cell audio { width:100%; min-width:180px; }
+.pagination { display:flex; align-items:center; justify-content:center; gap:1rem; margin-top:1rem; }
+@media (max-width:767px) {
+  .calllog-tabs { margin-left:-.1rem; margin-right:-.1rem; }
+  .s50-cdr-table td[data-label="Recording"] { display:block; }
+  .s50-cdr-table td[data-label="Recording"]::before { display:block; margin-bottom:.35rem; }
+  .cdr-recording-cell { min-width:0; }
+  .pagination { gap:.5rem; justify-content:space-between; }
+  .pagination button { min-height:44px; }
+}

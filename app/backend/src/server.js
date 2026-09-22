@@ -12,6 +12,7 @@ const visitorsRoutes = require('./routes/visitors.routes');
 const calllogRoutes = require('./routes/calllog.routes');
 const settingsRoutes = require('./routes/settings.routes');
 const reportsRoutes = require('./routes/reports.routes');
+const s50Routes = require('./routes/s50.routes');
 const searchRoutes = require('./routes/search.routes');
 const importRoutes = require('./routes/import.routes');
 const buildOptionsRouter = require('./routes/optionsFactory');
@@ -38,8 +39,13 @@ app.use('/api/visitors', visitorsRoutes);
 app.use('/api/calllog', calllogRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/s50', s50Routes);
 app.use('/api/search', searchRoutes);
 app.use('/api/import', importRoutes);
+
+// S50 CDR is intentionally inspection-only. Optional background sync never controls calls.
+const s50Service = require('./services/s50.service');
+setInterval(() => { s50Service.autoSyncOnce().catch((err) => console.warn('[s50] auto-sync:', err.message)); }, 5 * 60 * 1000).unref();
 app.use('/api/settings/purpose-options', buildOptionsRouter('purpose_options'));
 app.use('/api/settings/enquiry-type-options', buildOptionsRouter('enquiry_type_options'));
 app.use('/api/settings/meeting-person-options', buildOptionsRouter('meeting_person_options'));
