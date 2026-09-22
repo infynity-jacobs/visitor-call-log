@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.5.1
+
+- Added Visitor Register Edit for all authenticated users.
+- Added server-side `PUT /api/visitors/:id` handling with the same Purpose, Enquiry Type, Meeting Person, date, time, phone, and conditional-detail validation used by Visitor creation.
+- Visitor edits preserve the original record ID, creator, creation timestamp, idempotency key, and historical import metadata.
+- Visitor edits update `updated_at` and create a `record_update` audit entry with the authenticated editing user.
+- Added IST-safe conversion for loading stored visitor date/time values into the Visitor Register edit form.
+- Added Edit actions to Visitor Register records and selected-record view, with Save Changes and Cancel controls.
+- Preserved Super Administrator-only permanent deletion.
+- Visitor Register Edit does not modify the S50 CDR / Auto Sync implementation.
+
+
 ## 1.4.0
 
 - Added S50 CDR access classification for Internal, Inbound, and Outbound calls.

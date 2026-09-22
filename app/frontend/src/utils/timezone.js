@@ -36,6 +36,32 @@ export function currentIstDateTimeInput() {
   return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
 }
 
+// Converts the application's stored UTC clock date/time values back into
+// an HTML datetime-local value in IST.
+export function utcPartsToIstDateTimeInput(dateValue, timeValue) {
+  if (!dateValue || !timeValue) return '';
+
+  const rawDate = String(dateValue).slice(0, 10);
+  const rawTime = String(timeValue).slice(0, 8);
+  const instant = new Date(`${rawDate}T${rawTime}Z`);
+
+  if (Number.isNaN(instant.getTime())) return '';
+
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).formatToParts(instant);
+
+  const get = (type) => parts.find((p) => p.type === type)?.value || '';
+
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
+}
+
 // Converts an IST datetime-local value into the UTC clock date/time used by the
 // existing database storage convention. The selected value is always treated as IST,
 // regardless of the browser/server timezone.

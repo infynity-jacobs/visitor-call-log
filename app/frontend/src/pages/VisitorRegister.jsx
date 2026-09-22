@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api/client';
 import { useSearchParams } from 'react-router-dom';
 import { GlobalSearch } from '../components/GlobalSearch.jsx';
-import { formatIstDateTime, currentIstDateTimeInput, istDateTimeInputToUtcParts } from '../utils/timezone';
+import { formatIstDateTime, currentIstDateTimeInput, istDateTimeInputToUtcParts, utcPartsToIstDateTimeInput } from '../utils/timezone';
 import { useAuth } from '../context/AuthContext.jsx';
 
 function createEmptyForm() {
@@ -29,6 +29,7 @@ export default function VisitorRegister() {
   const [recent, setRecent] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [editingRecordId, setEditingRecordId] = useState(null);
 
   const loadOptions = useCallback(async () => {
     const data = await api.request('/visitors/options/all');
@@ -51,6 +52,46 @@ export default function VisitorRegister() {
     if (!id) { setSelectedRecord(null); return; }
     api.request(`/visitors/${id}`).then((data) => setSelectedRecord(data.record)).catch((err) => setMessage({ type: 'error', text: err.message }));
   }, [searchParams]);
+
+  async function editRecord(id) {
+    try {
+      setMessage(null);
+
+      const data = await api.request(`/visitors/${id}`);
+      const r = data.record;
+
+      setForm({
+        visitDateTime: utcPartsToIstDateTimeInput(r.visit_date, r.visit_time),
+        name: r.name || '',
+        place: r.place || '',
+        phone: r.phone || '',
+        purpose: r.purpose || '',
+        purposeDetails: r.purpose_details || '',
+        enquiryType: r.enquiry_type || '',
+        enquiryDetails: r.enquiry_details || '',
+        complaintDetails: r.complaint_details || '',
+        purchaseDetails: r.purchase_details || '',
+        personToVisit: r.person_to_visit || '',
+        personToVisitOther: r.person_to_visit_other || '',
+        interviewDetails: r.interview_details || '',
+        donationDetails: r.donation_details || '',
+        otherDetails: r.other_details || ''
+      });
+
+      setEditingRecordId(r.id);
+      setSelectedRecord(null);
+      setSearchParams({});
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message });
+    }
+  }
+
+  function cancelEdit() {
+    resetForm();
+    setEditingRecordId(null);
+    setMessage(null);
+  }
 
   async function deleteRecord(id) {
     if (!window.confirm('Permanently delete this record? This cannot be undone.')) return;
@@ -75,16 +116,49 @@ export default function VisitorRegister() {
     setMessage(null);
     try {
       const { date: visitDate, time: visitTime } = istDateTimeInputToUtcParts(form.visitDateTime);
-      const data = await api.request('/visitors', {
-        method: 'POST',
-        body: { ...form, visitDate, visitTime, idempotencyKey }
+
+      const requestPath = editingRecordId
+        ? `/visitors/${editingRecordId}`
+        : '/visitors';
+
+      const requestBody = {
+        visitDate,
+        visitTime,
+        name: form.name,
+        place: form.place,
+        phone: form.phone,
+        purpose: form.purpose,
+        purposeDetails: form.purposeDetails,
+        enquiryType: form.enquiryType,
+        enquiryDetails: form.enquiryDetails,
+        complaintDetails: form.complaintDetails,
+        purchaseDetails: form.purchaseDetails,
+        personToVisit: form.personToVisit,
+        personToVisitOther: form.personToVisitOther,
+        interviewDetails: form.interviewDetails,
+        donationDetails: form.donationDetails,
+        otherDetails: form.otherDetails
+      };
+
+      if (!editingRecordId) {
+        requestBody.idempotencyKey = idempotencyKey;
+      }
+
+      const data = await api.request(requestPath, {
+        method: editingRecordId ? 'PUT' : 'POST',
+        body: requestBody
       });
+
       setMessage({
         type: 'success',
-        text: data.duplicate
-          ? 'This entry was already saved — showing the existing record.'
-          : 'Visitor entry saved successfully.'
+        text: editingRecordId
+          ? 'Visitor record updated successfully.'
+          : data.duplicate
+            ? 'This entry was already saved — showing the existing record.'
+            : 'Visitor entry saved successfully.'
       });
+
+      setEditingRecordId(null);
       resetForm();
       loadRecent().catch(() => {});
     } catch (err) {
@@ -102,7 +176,13 @@ export default function VisitorRegister() {
       <GlobalSearch />
       {selectedRecord && (
         <div className="card selected-record">
-          <div className="section-heading"><h3 style={{ margin: 0 }}>Visitor Record #{selectedRecord.id}</h3><button className="secondary" onClick={closeSelected}>Close</button></div>
+          <div className="section-heading">
+            <h3 style={{ margin: 0 }}>Visitor Record #{selectedRecord.id}</h3>
+            <div>
+              <button className="secondary" onClick={() => editRecord(selectedRecord.id)}>Edit</button>
+              <button className="secondary" onClick={closeSelected}>Close</button>
+            </div>
+          </div>
           <div className="record-grid">
             <div><strong>Date &amp; Time (IST)</strong><span>{formatIstDateTime(selectedRecord.visit_date, selectedRecord.visit_time)}</span></div>
             <div><strong>Name</strong><span>{selectedRecord.name}</span></div>
@@ -235,9 +315,13 @@ export default function VisitorRegister() {
 
           <div className="actions">
             <button type="submit" className="primary" disabled={submitting}>
-              {submitting ? 'Saving…' : 'Save'}
+              {submitting ? 'Saving…' : editingRecordId ? 'Save Changes' : 'Save'}
             </button>
-            <button type="button" className="secondary" onClick={resetForm} disabled={submitting}>Clear</button>
+            {editingRecordId ? (
+              <button type="button" className="secondary" onClick={cancelEdit} disabled={submitting}>Cancel</button>
+            ) : (
+              <button type="button" className="secondary" onClick={resetForm} disabled={submitting}>Clear</button>
+            )}
           </div>
         </form>
       </div>
@@ -246,7 +330,7 @@ export default function VisitorRegister() {
         <div className="section-heading"><h3 style={{ marginTop: 0, marginBottom: 0 }}>Recent entries</h3><span className="muted">{recent.length} record{recent.length === 1 ? '' : 's'}</span></div>
         <table className="mobile-cards">
           <thead>
-            <tr><th>S.No.</th><th>Date</th><th>Time</th><th>Name</th><th>Place</th><th>Phone</th><th>Purpose</th>{isSuperAdmin && <th>Actions</th>}</tr>
+            <tr><th>S.No.</th><th>Date</th><th>Time</th><th>Name</th><th>Place</th><th>Phone</th><th>Purpose</th><th>Actions</th></tr>
           </thead>
           <tbody>
             {recent.map((r) => (
@@ -257,10 +341,16 @@ export default function VisitorRegister() {
                 <td data-label="Name">{r.name}</td>
                 <td data-label="Place">{r.place || "—"}</td>
                 <td data-label="Phone">{r.phone || "—"}</td>
-                <td data-label="Purpose">{r.purpose}</td>{isSuperAdmin && <td data-label="Actions"><button className="danger" onClick={() => deleteRecord(r.id)}>Delete</button></td>}
+                <td data-label="Purpose">{r.purpose}</td>
+                <td data-label="Actions">
+                  <button className="secondary" onClick={() => editRecord(r.id)}>Edit</button>
+                  {isSuperAdmin && (
+                    <button className="danger" onClick={() => deleteRecord(r.id)}>Delete</button>
+                  )}
+                </td>
               </tr>
             ))}
-            {recent.length === 0 && <tr><td colSpan={isSuperAdmin ? 8 : 7} style={{ color: '#6b7280' }}>No entries yet.</td></tr>}
+            {recent.length === 0 && <tr><td colSpan={8} style={{ color: '#6b7280' }}>No entries yet.</td></tr>}
           </tbody>
         </table>
       </div>

@@ -4,7 +4,7 @@ const COLUMNS = `
   id, visit_date, visit_time, name, place, phone, purpose, purpose_details,
   enquiry_type, enquiry_details, complaint_details, purchase_details,
   person_to_visit, person_to_visit_other, interview_details,
-  donation_details, other_details, created_at
+  donation_details, other_details, created_at, updated_at
 `;
 
 function buildDateFilter({ mode, date, startDate, endDate }, paramOffset = 1) {

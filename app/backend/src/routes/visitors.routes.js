@@ -83,6 +83,151 @@ router.post('/', async (req, res, next) => {
   }
 });
 
+router.put('/:id', async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id < 1) {
+      throw new ValidationError('Invalid record ID.');
+    }
+
+    const body = req.body;
+
+    const name = requireString(body.name, 'Name');
+    const purpose = requireString(body.purpose, 'Purpose');
+
+    await validateConfiguredOption('purpose_options', purpose, 'Purpose');
+
+    const place = requireString(body.place, 'Place', { optional: true });
+    const phone = validatePhone(body.phone, 'Phone', { optional: true });
+    const visitDate = validateDate(body.visitDate, 'Date', { optional: true });
+    const visitTime = validateTime(body.visitTime, 'Time', { optional: true });
+
+    if (purpose === 'Meeting') {
+      await validateConfiguredOption(
+        'meeting_person_options',
+        body.personToVisit,
+        'Person to Visit'
+      );
+
+      if (!body.personToVisit) {
+        throw new ValidationError(
+          'Person to Visit is required when Purpose is Meeting.'
+        );
+      }
+
+      if (body.personToVisit === 'Others' && !body.personToVisitOther) {
+        throw new ValidationError(
+          'Others Details is required when Person to Visit is Others.'
+        );
+      }
+    } else if (PURPOSE_DETAIL_MAP[purpose]) {
+      const field = PURPOSE_DETAIL_MAP[purpose];
+
+      if (!body[field]) {
+        throw new ValidationError(
+          `Details are required for Purpose "${purpose}".`
+        );
+      }
+    }
+
+    if (purpose === 'Enquiry' && body.enquiryType) {
+      await validateConfiguredOption(
+        'enquiry_type_options',
+        body.enquiryType,
+        'Enquiry Type'
+      );
+    }
+
+    if (purpose === 'Enquiry' && !body.enquiryType) {
+      throw new ValidationError(
+        'Enquiry Type is required when Purpose is Enquiry.'
+      );
+    }
+
+    const result = await withTransaction(async (client) => {
+      const beforeResult = await client.query(
+        `SELECT id, name, purpose FROM visitors WHERE id = $1 FOR UPDATE`,
+        [id]
+      );
+
+      if (!beforeResult.rows.length) return null;
+
+      const updatedResult = await client.query(
+        `UPDATE visitors
+         SET
+           visit_date = COALESCE($1::date, visit_date),
+           visit_time = COALESCE($2::time, visit_time),
+           name = $3,
+           place = $4,
+           phone = $5,
+           purpose = $6,
+           purpose_details = $7,
+           enquiry_type = $8,
+           enquiry_details = $9,
+           complaint_details = $10,
+           purchase_details = $11,
+           person_to_visit = $12,
+           person_to_visit_other = $13,
+           interview_details = $14,
+           donation_details = $15,
+           other_details = $16,
+           updated_at = now()
+         WHERE id = $17
+         RETURNING id, name, purpose, updated_at`,
+        [
+          visitDate || null,
+          visitTime || null,
+          name,
+          place,
+          phone,
+          purpose,
+          body.purposeDetails || null,
+          body.enquiryType || null,
+          body.enquiryDetails || null,
+          body.complaintDetails || null,
+          body.purchaseDetails || null,
+          body.personToVisit || null,
+          body.personToVisitOther || null,
+          body.interviewDetails || null,
+          body.donationDetails || null,
+          body.otherDetails || null,
+          id
+        ]
+      );
+
+      const updated = updatedResult.rows[0];
+
+      await client.query(
+        `INSERT INTO audit_log (user_id, action, details)
+         VALUES ($1, $2, $3)`,
+        [
+          req.user.id,
+          'record_update',
+          {
+            recordType: 'visitors',
+            recordId: id,
+            previousName: beforeResult.rows[0].name,
+            previousPurpose: beforeResult.rows[0].purpose,
+            updatedName: updated.name,
+            updatedPurpose: updated.purpose
+          }
+        ]
+      );
+
+      return updated;
+    });
+
+    if (!result) {
+      return res.status(404).json({ error: 'Visitor record not found.' });
+    }
+
+    const record = await visitorsService.getById(id);
+    res.json({ record });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/', async (req, res, next) => {
   try {
     const filter = validateDateFilter(req.query);

@@ -19,6 +19,7 @@ const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const path = require('node:path');
+const { Pool } = require('pg');
 
 const PORT = process.env.TEST_PORT || '3099';
 const BASE_URL = `http://localhost:${PORT}`;
@@ -26,6 +27,14 @@ const BACKEND_DIR = path.join(__dirname, '..', '..', 'app', 'backend');
 
 let serverProcess;
 let adminToken;
+
+const testDbPool = new Pool({
+  host: process.env.DB_HOST || '127.0.0.1',
+  port: process.env.DB_PORT || '5432',
+  database: process.env.DB_NAME || 'visitor_call_log',
+  user: process.env.DB_USER || 'vcl_app',
+  password: process.env.DB_PASSWORD || 'devpassword'
+});
 
 function waitForHealth(timeoutMs = 15000) {
   const start = Date.now();
@@ -86,8 +95,9 @@ before(async () => {
   assert.ok(adminToken, 'expected a JWT token from login');
 });
 
-after(() => {
+after(async () => {
   if (serverProcess) serverProcess.kill();
+  await testDbPool.end();
 });
 
 function authHeaders() {
@@ -168,6 +178,138 @@ test('creating a valid visitor succeeds and is retrievable', async () => {
   const listRes = await fetch(`${BASE_URL}/api/visitors?mode=all&limit=500`, { headers: authHeaders() });
   const list = await listRes.json();
   assert.ok(list.records.some((r) => r.id === created.record.id));
+});
+
+test('normal user can edit a visitor record and update is audited', async () => {
+  const username = `edituser${Date.now()}`;
+  const idempotencyKey = `edit-v-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  const createUserRes = await fetch(`${BASE_URL}/api/settings/users`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      username,
+      password: 'password123',
+      fullName: 'Visitor Edit Test User',
+      role: 'user'
+    })
+  });
+
+  assert.equal(createUserRes.status, 201);
+  const createdUser = (await createUserRes.json()).user;
+  assert.ok(createdUser?.id);
+
+  const loginRes = await fetch(`${BASE_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password: 'password123' })
+  });
+
+  assert.equal(loginRes.status, 200);
+
+  const { token: userToken } = await loginRes.json();
+  assert.ok(userToken);
+
+  const userHeaders = {
+    Authorization: `Bearer ${userToken}`,
+    'Content-Type': 'application/json'
+  };
+
+  const createRes = await fetch(`${BASE_URL}/api/visitors`, {
+    method: 'POST',
+    headers: userHeaders,
+    body: JSON.stringify({
+      visitDate: '2026-09-22',
+      visitTime: '12:34',
+      name: 'Visitor Before Edit',
+      place: 'Before Place',
+      phone: '5557001001',
+      purpose: 'Other',
+      otherDetails: 'Original visitor details',
+      idempotencyKey
+    })
+  });
+
+  assert.equal(createRes.status, 201);
+
+  const created = await createRes.json();
+  const visitorId = created.record.id;
+
+  assert.ok(visitorId);
+  assert.equal(created.record.name, 'Visitor Before Edit');
+
+  const beforeResult = await fetch(`${BASE_URL}/api/visitors/${visitorId}`, {
+    headers: userHeaders
+  });
+
+  assert.equal(beforeResult.status, 200);
+
+  const before = (await beforeResult.json()).record;
+
+  const updateRes = await fetch(`${BASE_URL}/api/visitors/${visitorId}`, {
+    method: 'PUT',
+    headers: userHeaders,
+    body: JSON.stringify({
+      visitDate: '2026-09-23',
+      visitTime: '14:45',
+      name: 'Visitor After Edit',
+      place: 'After Place',
+      phone: '5557002002',
+      purpose: 'Other',
+      otherDetails: 'Updated visitor details',
+      idempotencyKey: 'THIS MUST NOT REPLACE THE STORED KEY'
+    })
+  });
+
+  assert.equal(updateRes.status, 200);
+
+  const updated = (await updateRes.json()).record;
+
+  assert.equal(updated.id, visitorId);
+  assert.equal(updated.name, 'Visitor After Edit');
+  assert.equal(updated.place, 'After Place');
+  assert.equal(updated.phone, '5557002002');
+  assert.equal(new Date(updated.visit_date).toISOString().slice(0, 10), '2026-09-23');
+  assert.match(String(updated.visit_time), /^14:45/);
+  assert.equal(updated.purpose, 'Other');
+  assert.equal(updated.other_details, 'Updated visitor details');
+  assert.equal(updated.created_at, before.created_at);
+  assert.ok(updated.updated_at);
+
+  const dbResult = await testDbPool.query(
+    `SELECT id, created_by, idempotency_key, created_at, updated_at, name
+     FROM visitors
+     WHERE id = $1`,
+    [visitorId]
+  );
+
+  assert.equal(dbResult.rows.length, 1);
+
+  const dbVisitor = dbResult.rows[0];
+
+  assert.equal(dbVisitor.id, visitorId);
+  assert.equal(dbVisitor.created_by, createdUser.id);
+  assert.equal(dbVisitor.idempotency_key, idempotencyKey);
+  assert.equal(dbVisitor.name, 'Visitor After Edit');
+  assert.ok(new Date(dbVisitor.updated_at) > new Date(dbVisitor.created_at));
+
+  const auditResult = await testDbPool.query(
+    `SELECT user_id, action, details
+     FROM audit_log
+     WHERE action = 'record_update'
+       AND details->>'recordId' = $1
+     ORDER BY id DESC
+     LIMIT 1`,
+    [String(visitorId)]
+  );
+
+  assert.equal(auditResult.rows.length, 1);
+  assert.equal(auditResult.rows[0].user_id, createdUser.id);
+  assert.equal(auditResult.rows[0].action, 'record_update');
+  assert.equal(auditResult.rows[0].details.recordType, 'visitors');
+  assert.equal(auditResult.rows[0].details.recordId, visitorId);
+  assert.equal(auditResult.rows[0].details.previousName, 'Visitor Before Edit');
+  assert.equal(auditResult.rows[0].details.updatedName, 'Visitor After Edit');
 });
 
 test('creating a call log entry succeeds', async () => {
