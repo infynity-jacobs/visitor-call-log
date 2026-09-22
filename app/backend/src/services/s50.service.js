@@ -148,6 +148,59 @@ function parseCsv(text) {
   return rows;
 }
 
+function cdrKeyPart(value) {
+  if (value === null || value === undefined) return '<NULL>';
+  const text = String(value).trim();
+  return text || '<NULL>';
+}
+
+function canonicalCdrTimestamp(value) {
+  if (value === null || value === undefined) return null;
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime())
+      ? null
+      : value.toISOString().slice(0, 19).replace('T', ' ');
+  }
+
+  const text = String(value).trim();
+  if (!text) return null;
+
+  const match = text.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}(?::?\d{2})?)?$/i);
+  return match ? `${match[1]} ${match[2]}` : null;
+}
+
+function buildCdrKey(row) {
+  const raw = row.rawData || {};
+
+  const sourceTrunk = String(row.trunk || '').trim();
+
+  const destinationTrunk = String(
+    raw.dsttrunkname || ''
+  ).trim();
+
+  const startAt = canonicalCdrTimestamp(row.startAt);
+
+  const values = [
+    row.callId,
+    startAt,
+    row.callType ? String(row.callType).trim().toLowerCase() : null,
+    row.callFrom,
+    row.callTo,
+    sourceTrunk || null,
+    destinationTrunk || null,
+    row.didNumber,
+    row.durationSeconds,
+    row.talkDurationSeconds,
+    row.status ? String(row.status).trim().toLowerCase() : null,
+  ];
+
+  return crypto
+    .createHash('md5')
+    .update(values.map(cdrKeyPart).join('\x1f'), 'utf8')
+    .digest('hex');
+}
+
 function normalizeRow(row) {
   const direction = String(row.type || row.direction || '').trim();
   const normalizedType = direction.toLowerCase();
@@ -158,7 +211,7 @@ function normalizeRow(row) {
   else if (normalizedType === 'outbound') callType = 'outbound';
   else if (normalizedType === 'transfer') callType = 'transfer';
 
-  return {
+  const normalized = {
     callId: String(row.callid || row.call_id || '').trim(),
     startAt: parseCdrTime(row.timestart || row.starttime),
     direction,
@@ -173,6 +226,9 @@ function normalizeRow(row) {
     recording: String(row.recording || '').trim() || null,
     rawData: row,
   };
+
+  normalized.cdrKey = buildCdrKey(normalized);
+  return normalized;
 }
 
 async function fetchCdr(cfg, starttime, endtime) {
@@ -207,9 +263,9 @@ async function syncRange(starttime, endtime) {
     }
     const result = await query(`
       INSERT INTO s50_call_logs
-        (call_id,start_at,direction,call_type,call_from,call_to,trunk,did_number,duration_seconds,talk_duration_seconds,status,recording,raw_data,updated_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now())
-      ON CONFLICT (call_id) DO UPDATE SET
+        (cdr_key,call_id,start_at,direction,call_type,call_from,call_to,trunk,did_number,duration_seconds,talk_duration_seconds,status,recording,raw_data,updated_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,now())
+      ON CONFLICT (cdr_key) DO UPDATE SET
         start_at=EXCLUDED.start_at,
         direction=EXCLUDED.direction,
         call_type=EXCLUDED.call_type,
@@ -224,7 +280,7 @@ async function syncRange(starttime, endtime) {
         raw_data=EXCLUDED.raw_data,
         updated_at=now()
       RETURNING (xmax = 0) AS inserted
-    `, [row.callId,row.startAt,row.direction,row.callType,row.callFrom,row.callTo,row.trunk,row.didNumber,row.durationSeconds,row.talkDurationSeconds,row.status,row.recording,row.rawData]);
+    `, [row.cdrKey,row.callId,row.startAt,row.direction,row.callType,row.callFrom,row.callTo,row.trunk,row.didNumber,row.durationSeconds,row.talkDurationSeconds,row.status,row.recording,row.rawData]);
     if (result.rows[0]?.inserted) inserted += 1; else updated += 1;
   }
   await query('UPDATE s50_cdr_settings SET last_sync_at=now(), last_sync_status=$1, last_sync_message=$2, updated_at=now() WHERE id=1', ['success', `Fetched ${rows.length}; inserted ${inserted}; updated ${updated}; ignored ${ignored}.`]);
@@ -401,6 +457,7 @@ async function getExtensionNames(numbers) {
 }
 
 module.exports = {
+  buildCdrKey,
   loadConfig,
   fetchCdr,
   syncRange,
