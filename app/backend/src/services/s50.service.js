@@ -180,6 +180,10 @@ async function fetchCdr(cfg, starttime, endtime) {
     number: 'all', starttime, endtime,
   });
   if (String(randomResponse.status || '').toLowerCase() !== 'success' || !randomResponse.random) {
+    if (String(randomResponse.errno || '') === '20021') {
+      return [];
+    }
+
     throw new Error(`S50 CDR request failed${randomResponse.errno ? ` (error ${randomResponse.errno})` : ''}.`);
   }
   const url = `${baseUrl(cfg)}/cdr/download?number=all&starttime=${encodeURIComponent(starttime)}&endtime=${encodeURIComponent(endtime)}&token=${encodeURIComponent(token)}&random=${encodeURIComponent(randomResponse.random)}`;

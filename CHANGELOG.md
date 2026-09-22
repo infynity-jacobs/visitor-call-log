@@ -9,7 +9,8 @@
 - Added IST-safe conversion for loading stored visitor date/time values into the Visitor Register edit form.
 - Added Edit actions to Visitor Register records and selected-record view, with Save Changes and Cancel controls.
 - Preserved Super Administrator-only permanent deletion.
-- Visitor Register Edit does not modify the S50 CDR / Auto Sync implementation.
+- Visitor Register Edit changes are independent of the S50 CDR / Auto Sync functionality.
+- Fixed S50 Auto Sync treating Yeastar error 20021 (no CDR file for an empty time window) as a synchronization failure; empty windows are now recorded as successful zero-record syncs while other S50 errors remain failures.
 
 
 ## 1.4.0
