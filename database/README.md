@@ -29,3 +29,7 @@ sudo ./deploy/migrate.sh
 5. Commit the file and run `deploy/migrate.sh` (or `deploy/update.sh`, which runs it automatically) on each environment.
 
 Never edit a migration that has already been applied to any environment — add a new migration instead.
+
+## Migration 008 — S50 CDR and Call Log archive
+
+Migration `008_s50_cdr_archive.sql` renames the existing `call_logs` table to `call_logs_archive` and creates the S50 CDR/settings tables. Existing manual Call Log records are preserved. The active Call Log UI reads from `s50_call_logs`; the archived manual records remain read-only in the application.

@@ -82,3 +82,18 @@ Both the Visitor Register and Call Log pages include Global Search across the co
 Version 1.2.0 adds a Super Administrator role. The seeded `admin` account is promoted to Super Administrator by migration 005. Only Super Administrators can permanently delete Visitor Register or Call Log records and import historical Excel data. Destructive record deletion is audited.
 
 Historical Excel import is available under Settings for Super Administrators. Select VISITOR REGISTER or CALL LOG, choose the historical `.xlsx` file, and use **Preview & Validate** before committing. The importer validates the required first-sheet columns and all data rows; an import is blocked if any row is invalid. Source dates/times are treated as Asia/Kolkata (IST), the spreadsheet SNO is preserved as `source_sno`, the original source row is retained in `import_raw`, and the exact workbook is protected against duplicate re-import by SHA-256. Completed batches are listed in Import History. The supplied historical workbooks contain a `VISITORS` first sheet and a `Log` first sheet; auxiliary SNO/AREA sheets are not imported.
+
+## Yeastar S50 CDR
+
+Version 1.3.0 adds an inspection-only Yeastar S50 CDR integration. It does not provide browser calling, WebRTC, SIP registration, PBX control, or Asterisk functionality.
+
+Configure **Settings → S50 CDR** with the S50 API server, protocol/port, API version, username, and password. Use **Test Connection** before enabling sync. The application keeps the API password encrypted at rest and never returns it to the browser.
+
+The Call Log module provides:
+- S50 CDR filters for IST date/time, direction, status, extension, phone/trunk/DID search.
+- Manual **Sync S50** for the selected date/time range.
+- Optional automatic synchronization.
+- Idempotent storage by Yeastar `callid`.
+- Recording playback through the application backend; the browser never receives S50 credentials.
+
+The previous manual Call Log is preserved in **Archived Call Log** as a read-only historical dataset. Visitor Register is unchanged.

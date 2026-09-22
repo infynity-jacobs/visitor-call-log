@@ -160,3 +160,7 @@ This release adds on-screen IST date filtering for Visitor Register and Call Log
 - Import supports the supplied VISITORS REGISTER.xlsx and Call Log.xlsx layouts, preserves source S.No./raw rows, blocks invalid imports, prevents exact workbook re-imports, and provides import history under Settings for Super Administrators.
 - PDF report branding uses a compact inline logo/header layout.
 - Main page distinguishes VISITOR REGISTER and CALL LOG with separate color schemes.
+
+## v1.3.0 Call Log / Yeastar S50
+
+The Call Log module can now import Yeastar S50 CDRs and retrieve associated recordings for playback. This integration is intentionally read-only with respect to PBX operation: it does not place calls or provide WebRTC/SIP/PBX control. The former manual Call Log is preserved as a read-only archive. Configure the integration under **Settings → S50 CDR**.
