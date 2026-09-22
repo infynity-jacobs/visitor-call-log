@@ -161,7 +161,7 @@ router.post('/users', requireAdmin, async (req, res, next) => {
     const username = requireString(req.body.username, 'Username', { maxLen: 100 });
     const password = requireString(req.body.password, 'Password');
     const fullName = requireString(req.body.fullName, 'Full name', { maxLen: 255, optional: true });
-    if (!['super_admin', 'admin', 'user'].includes(req.body.role)) throw new ValidationError('Role must be super_admin, admin or user.');
+    if (!['super_admin', 'admin', 'manager', 'user'].includes(req.body.role)) throw new ValidationError('Role must be super_admin, admin, manager or user.');
     const role = req.body.role;
     if (role === 'super_admin' && req.user.role !== 'super_admin') throw new ValidationError('Only a Super Administrator can create a Super Administrator account.');
     if (password.length < 8) throw new ValidationError('Password must be at least 8 characters.');
@@ -188,7 +188,7 @@ router.put('/users/:id', requireAdmin, async (req, res, next) => {
     if (targetId === Number(req.user.id) && req.body.isActive === false) throw new ValidationError('You cannot deactivate your own administrator account.');
     if (target.role === 'super_admin' && req.user.role !== 'super_admin' && (req.body.role !== undefined || req.body.isActive !== undefined)) throw new ValidationError('Only a Super Administrator can modify a Super Administrator account.');
     if (req.body.role === 'super_admin' && req.user.role !== 'super_admin') throw new ValidationError('Only a Super Administrator can assign the Super Administrator role.');
-    if (!['super_admin', 'admin', 'user'].includes(req.body.role || target.role)) throw new ValidationError('Role must be super_admin, admin or user.');
+    if (!['super_admin', 'admin', 'manager', 'user'].includes(req.body.role || target.role)) throw new ValidationError('Role must be super_admin, admin, manager or user.');
     const resultingRole = req.body.role === undefined ? target.role : req.body.role;
     const resultingActive = req.body.isActive === undefined ? target.is_active : req.body.isActive;
     if (['admin','super_admin'].includes(target.role) && (!resultingActive || resultingRole === 'user')) {

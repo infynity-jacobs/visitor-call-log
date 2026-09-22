@@ -304,7 +304,13 @@ function UsersSection() {
           <tbody>
             {users.map((u) => (
               <tr key={u.id}>
-                <td>{u.username}</td><td>{u.full_name || '—'}</td><td>{u.role === 'super_admin' ? 'Super Administrator' : u.role === 'admin' ? 'Administrator' : 'Normal user'}</td>
+                <td>{u.username}</td><td>{u.full_name || '—'}</td><td>{u.role === 'super_admin'
+  ? 'Super Administrator'
+  : u.role === 'admin'
+    ? 'Administrator'
+    : u.role === 'manager'
+      ? 'Manager'
+      : 'Normal user'}</td>
                 <td><span className={`badge ${u.is_active ? 'enabled' : 'disabled'}`}>{u.is_active ? 'Active' : 'Disabled'}</span></td>
                 <td><div className="inline-actions">
                   <button className="secondary" onClick={() => beginEdit(u)} disabled={busy}>Edit</button>
@@ -324,7 +330,7 @@ function UsersSection() {
             <div><label>Username *</label><input value={editForm.username} onChange={(e) => setEditForm({ ...editForm, username: e.target.value })} required /></div>
             <div><label>Full name *</label><input value={editForm.fullName} onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })} required /></div>
             <div><label>New password</label><input type="password" minLength="8" placeholder="Leave blank to keep current" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} /></div>
-            <div><label>Role</label><select value={editForm.role} onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}><option value="user">Normal user</option><option value="admin">Administrator</option><option value="super_admin">Super Administrator</option></select></div>
+            <div><label>Role</label><select value={editForm.role} onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}><option value="user">Normal user</option><option value="manager">Manager</option><option value="admin">Administrator</option><option value="super_admin">Super Administrator</option></select></div>
             <div><label>Status</label><select value={editForm.isActive ? 'active' : 'disabled'} onChange={(e) => setEditForm({ ...editForm, isActive: e.target.value === 'active' })}><option value="active">Active</option><option value="disabled">Disabled</option></select></div>
           </div>
           <div className="actions"><button type="submit" className="primary" disabled={busy}>{busy ? 'Saving…' : 'Save changes'}</button><button type="button" className="secondary" onClick={cancelEdit}>Cancel</button></div>
@@ -337,7 +343,7 @@ function UsersSection() {
           <div><label>Username *</label><input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required /></div>
           <div><label>Full name *</label><input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required /></div>
           <div><label>Password * (min 8 chars)</label><input type="password" minLength="8" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required /></div>
-          <div><label>Role</label><select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}><option value="user">Normal user</option><option value="admin">Administrator</option><option value="super_admin">Super Administrator</option></select></div>
+          <div><label>Role</label><select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}><option value="user">Normal user</option><option value="manager">Manager</option><option value="admin">Administrator</option><option value="super_admin">Super Administrator</option></select></div>
         </div>
         <div className="actions"><button type="submit" className="primary" disabled={busy}>{busy ? 'Adding…' : 'Add user'}</button></div>
       </form>

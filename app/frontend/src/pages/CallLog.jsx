@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { GlobalSearch } from '../components/GlobalSearch.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import { formatIstDateTime } from '../utils/timezone';
 
 function pad(n) { return String(n).padStart(2, '0'); }
@@ -22,7 +23,20 @@ function duration(value) {
   return `${pad(Math.floor(n / 3600))}:${pad(Math.floor((n % 3600) / 60))}:${pad(n % 60)}`;
 }
 
+function formatEndpoint(number, name) {
+  const value = String(number || '').trim();
+  const label = String(name || '').trim();
+
+  if (!value) return '—';
+  if (!label) return value;
+
+  return `${label} (${value})`;
+}
+
 function S50CdrView() {
+  const { user } = useAuth();
+  const isNormalUser = user?.role === 'user';
+
   const [records, setRecords] = useState([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -87,10 +101,10 @@ function S50CdrView() {
       <div className="form-grid s50-filters">
         <div><label>From (IST)</label><input type="datetime-local" value={filters.startDateTime} onChange={(e) => update('startDateTime', e.target.value)} /></div>
         <div><label>To (IST)</label><input type="datetime-local" value={filters.endDateTime} onChange={(e) => update('endDateTime', e.target.value)} /></div>
-        <div><label>Direction</label><select value={filters.direction} onChange={(e) => update('direction', e.target.value)}><option value="all">All</option><option value="Inbound">Inbound</option><option value="Outbound">Outbound</option><option value="Internal">Internal</option></select></div>
+        <div><label>Direction</label><select value={filters.direction} onChange={(e) => update('direction', e.target.value)}><option value="all">All</option><option value="Inbound">Inbound</option><option value="Outbound">Outbound</option>{!isNormalUser && <option value="Internal">Internal</option>}</select></div>
         <div><label>Status</label><select value={filters.status} onChange={(e) => update('status', e.target.value)}><option value="all">All</option><option value="Answered">Answered</option><option value="Missed">Missed</option><option value="Busy">Busy</option><option value="Failed">Failed</option></select></div>
-        <div><label>Extension</label><input value={filters.extension} onChange={(e) => update('extension', e.target.value)} placeholder="e.g. 150" /></div>
-        <div><label>Search</label><input value={filters.search} onChange={(e) => update('search', e.target.value)} placeholder="Phone, trunk, DID..." onKeyDown={(e) => { if (e.key === 'Enter') load(0); }} /></div>
+        <div><label>Extension</label><input value={filters.extension} onChange={(e) => update('extension', e.target.value)} placeholder="Extension number or name" /></div>
+        <div><label>Search</label><input value={filters.search} onChange={(e) => update('search', e.target.value)} placeholder="Phone, extension name, trunk, DID..." onKeyDown={(e) => { if (e.key === 'Enter') load(0); }} /></div>
       </div>
       <div className="actions"><button className="secondary" onClick={() => load(0)} disabled={busy}>{busy ? 'Loading…' : 'Search'}</button><button className="secondary" onClick={() => {
         const defaults = { startDateTime: currentIstInput(-24*60), endDateTime: currentIstInput(), direction:'all', status:'all', extension:'', search:'' };
@@ -107,8 +121,8 @@ function S50CdrView() {
           <tbody>{records.map((r) => <tr key={r.id}>
             <td data-label="Date & Time (IST)">{formatS50Time(r.start_at)}</td>
             <td data-label="Type"><span className={`cdr-direction ${String(r.direction||'').toLowerCase()}`}>{directionLabel(r)}</span></td>
-            <td data-label="From">{r.call_from || '—'}</td>
-            <td data-label="To">{r.call_to || '—'}</td>
+            <td data-label="From">{formatEndpoint(r.call_from, r.from_name)}</td>
+            <td data-label="To">{formatEndpoint(r.call_to, r.to_name)}</td>
             <td data-label="Trunk">{r.trunk || '—'}</td>
             <td data-label="Call Duration">{duration(r.duration_seconds)}</td>
             <td data-label="Talk Duration">{duration(r.talk_duration_seconds)}</td>

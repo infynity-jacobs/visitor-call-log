@@ -150,10 +150,18 @@ function parseCsv(text) {
 
 function normalizeRow(row) {
   const direction = String(row.type || row.direction || '').trim();
+  const normalizedType = direction.toLowerCase();
+
+  let callType = null;
+  if (normalizedType === 'internal') callType = 'internal';
+  else if (normalizedType === 'inbound') callType = 'inbound';
+  else if (normalizedType === 'outbound') callType = 'outbound';
+
   return {
     callId: String(row.callid || row.call_id || '').trim(),
     startAt: parseCdrTime(row.timestart || row.starttime),
     direction,
+    callType,
     callFrom: String(row.callfrom || row.caller || '').trim() || null,
     callTo: String(row.callto || row.callee || '').trim() || null,
     trunk: String(row.srctrunkname || row.trunk || row.trunkname || row.dsttrunkname || '').trim() || null,
@@ -187,17 +195,31 @@ async function syncRange(starttime, endtime) {
   for (const raw of rows) {
     const row = normalizeRow(raw);
     if (!row.callId || !row.startAt) { ignored += 1; continue; }
+    if (!row.callType) {
+      throw new Error(
+        `Unsupported S50 CDR type "${row.direction || 'unknown'}" for call ${row.callId || 'unknown'}.`
+      );
+    }
     const result = await query(`
       INSERT INTO s50_call_logs
-        (call_id,start_at,direction,call_from,call_to,trunk,did_number,duration_seconds,talk_duration_seconds,status,recording,raw_data,updated_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now())
+        (call_id,start_at,direction,call_type,call_from,call_to,trunk,did_number,duration_seconds,talk_duration_seconds,status,recording,raw_data,updated_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now())
       ON CONFLICT (call_id) DO UPDATE SET
-        start_at=EXCLUDED.start_at,direction=EXCLUDED.direction,call_from=EXCLUDED.call_from,
-        call_to=EXCLUDED.call_to,trunk=EXCLUDED.trunk,did_number=EXCLUDED.did_number,
-        duration_seconds=EXCLUDED.duration_seconds,talk_duration_seconds=EXCLUDED.talk_duration_seconds,
-        status=EXCLUDED.status,recording=EXCLUDED.recording,raw_data=EXCLUDED.raw_data,updated_at=now()
+        start_at=EXCLUDED.start_at,
+        direction=EXCLUDED.direction,
+        call_type=EXCLUDED.call_type,
+        call_from=EXCLUDED.call_from,
+        call_to=EXCLUDED.call_to,
+        trunk=EXCLUDED.trunk,
+        did_number=EXCLUDED.did_number,
+        duration_seconds=EXCLUDED.duration_seconds,
+        talk_duration_seconds=EXCLUDED.talk_duration_seconds,
+        status=EXCLUDED.status,
+        recording=EXCLUDED.recording,
+        raw_data=EXCLUDED.raw_data,
+        updated_at=now()
       RETURNING (xmax = 0) AS inserted
-    `, [row.callId,row.startAt,row.direction,row.callFrom,row.callTo,row.trunk,row.didNumber,row.durationSeconds,row.talkDurationSeconds,row.status,row.recording,row.rawData]);
+    `, [row.callId,row.startAt,row.direction,row.callType,row.callFrom,row.callTo,row.trunk,row.didNumber,row.durationSeconds,row.talkDurationSeconds,row.status,row.recording,row.rawData]);
     if (result.rows[0]?.inserted) inserted += 1; else updated += 1;
   }
   await query('UPDATE s50_cdr_settings SET last_sync_at=now(), last_sync_status=$1, last_sync_message=$2, updated_at=now() WHERE id=1', ['success', `Fetched ${rows.length}; inserted ${inserted}; updated ${updated}; ignored ${ignored}.`]);
@@ -255,4 +277,96 @@ async function autoSyncOnce() {
   return syncRange(range.start, range.end);
 }
 
-module.exports = { loadConfig, fetchCdr, syncRange, testConnection, getRecording, saveSettings, publicSettings, autoSyncOnce };
+async function listExtensions() {
+  const cfg = await loadConfig();
+  if (!cfg) throw new Error('S50 CDR settings are not configured.');
+
+  const token = await login(cfg);
+  const response = await requestJson(
+    cfg,
+    `/extension/list?token=${encodeURIComponent(token)}`,
+    {}
+  );
+
+  if (String(response.status || '').toLowerCase() !== 'success') {
+    throw new Error(
+      `S50 extension list request failed${response.errno ? ` (error ${response.errno})` : ''}.`
+    );
+  }
+
+  return Array.isArray(response.extlist) ? response.extlist : [];
+}
+
+async function syncExtensions() {
+  const extensions = await listExtensions();
+
+  for (const ext of extensions) {
+    const number = String(ext.number || ext.extension || '').trim();
+    if (!number) continue;
+
+    const username = String(ext.username || ext.name || '').trim() || null;
+    const status = String(ext.status || '').trim() || null;
+    const type = String(ext.type || '').trim() || null;
+
+    await query(`
+      INSERT INTO s50_extensions
+        (extension_number, username, status, type, updated_at)
+      VALUES ($1,$2,$3,$4,now())
+      ON CONFLICT (extension_number) DO UPDATE SET
+        username=EXCLUDED.username,
+        status=EXCLUDED.status,
+        type=EXCLUDED.type,
+        updated_at=now()
+    `, [number, username, status, type]);
+  }
+
+  return {
+    fetched: extensions.length,
+    extensions: extensions.filter((ext) => String(ext.number || ext.extension || '').trim()),
+  };
+}
+
+async function getExtensionDirectory() {
+  const result = await query(`
+    SELECT extension_number, username, status, type, first_seen_at, updated_at
+    FROM s50_extensions
+    ORDER BY extension_number::text
+  `);
+
+  return result.rows;
+}
+
+async function getExtensionNames(numbers) {
+  const values = [...new Set(
+    (Array.isArray(numbers) ? numbers : [])
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)
+  )];
+
+  if (!values.length) return {};
+
+  const result = await query(`
+    SELECT extension_number, username
+    FROM s50_extensions
+    WHERE extension_number = ANY($1::varchar[])
+  `, [values]);
+
+  return Object.fromEntries(
+    result.rows.map((row) => [row.extension_number, row.username])
+  );
+}
+
+module.exports = {
+  loadConfig,
+  fetchCdr,
+  syncRange,
+  testConnection,
+  getRecording,
+  saveSettings,
+  publicSettings,
+  autoSyncOnce,
+  listExtensions,
+  syncExtensions,
+  getExtensionDirectory,
+  getExtensionNames
+};

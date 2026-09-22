@@ -32,20 +32,165 @@ router.get('/', async (req, res, next) => {
   try {
     const limit = Math.min(Math.max(Number.parseInt(req.query.limit || '100', 10) || 100, 1), 500);
     const offset = Math.max(Number.parseInt(req.query.offset || '0', 10) || 0, 0);
+
     const params = [];
     const where = [];
-    if (req.query.startDateTime) { params.push(validateDateTime(req.query.startDateTime, 'Start')); where.push(`start_at >= $${params.length}::timestamp`); params[params.length-1] = istToStoredUtcClock(params[params.length-1]); }
-    if (req.query.endDateTime) { params.push(validateDateTime(req.query.endDateTime, 'End')); where.push(`start_at <= $${params.length}::timestamp`); params[params.length-1] = istToStoredUtcClock(params[params.length-1]); }
-    if (req.query.direction && req.query.direction !== 'all') { params.push(req.query.direction); where.push(`lower(direction) = lower($${params.length})`); }
-    if (req.query.status && req.query.status !== 'all') { params.push(req.query.status); where.push(`lower(status) = lower($${params.length})`); }
-    if (req.query.extension) { params.push(`%${req.query.extension}%`); where.push(`(call_from ILIKE $${params.length} OR call_to ILIKE $${params.length})`); }
-    if (req.query.search) { params.push(`%${req.query.search}%`); where.push(`(call_from ILIKE $${params.length} OR call_to ILIKE $${params.length} OR COALESCE(trunk,'') ILIKE $${params.length} OR COALESCE(did_number,'') ILIKE $${params.length})`); }
+
+    // Server-side S50 visibility policy:
+    // Super Admin / Admin / Manager: all call types.
+    // Normal users: inbound and outbound only.
+    if (req.user?.role === 'user') {
+      where.push(`c.call_type IN ('inbound', 'outbound')`);
+    }
+
+    if (req.query.startDateTime) {
+      params.push(validateDateTime(req.query.startDateTime, 'Start'));
+      where.push(`c.start_at >= $${params.length}::timestamp`);
+      params[params.length - 1] = istToStoredUtcClock(params[params.length - 1]);
+    }
+
+    if (req.query.endDateTime) {
+      params.push(validateDateTime(req.query.endDateTime, 'End'));
+      where.push(`c.start_at <= $${params.length}::timestamp`);
+      params[params.length - 1] = istToStoredUtcClock(params[params.length - 1]);
+    }
+
+    if (req.query.direction && req.query.direction !== 'all') {
+      params.push(req.query.direction);
+      where.push(`lower(c.direction) = lower($${params.length})`);
+    }
+
+    if (req.query.status && req.query.status !== 'all') {
+      params.push(req.query.status);
+      where.push(`lower(c.status) = lower($${params.length})`);
+    }
+
+    if (req.query.extension) {
+      params.push(`%${req.query.extension}%`);
+      where.push(`(
+        c.call_from ILIKE $${params.length}
+        OR c.call_to ILIKE $${params.length}
+        OR EXISTS (
+          SELECT 1
+          FROM s50_extensions e
+          WHERE e.extension_number ILIKE $${params.length}
+            AND (
+              e.extension_number = c.call_from
+              OR e.extension_number = c.call_to
+            )
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM s50_extensions e
+          WHERE e.username ILIKE $${params.length}
+            AND (
+              e.extension_number = c.call_from
+              OR e.extension_number = c.call_to
+            )
+        )
+      )`);
+    }
+
+    if (req.query.search) {
+      params.push(`%${req.query.search}%`);
+      where.push(`(
+        c.call_from ILIKE $${params.length}
+        OR c.call_to ILIKE $${params.length}
+        OR COALESCE(c.trunk,'') ILIKE $${params.length}
+        OR COALESCE(c.did_number,'') ILIKE $${params.length}
+        OR EXISTS (
+          SELECT 1
+          FROM s50_extensions e
+          WHERE e.extension_number = c.call_from
+            AND e.username ILIKE $${params.length}
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM s50_extensions e
+          WHERE e.extension_number = c.call_to
+            AND e.username ILIKE $${params.length}
+        )
+      )`);
+    }
+
     const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
-    const count = await query(`SELECT count(*)::int AS total FROM s50_call_logs ${clause}`, params);
+
+    const count = await query(
+      `SELECT count(*)::int AS total
+       FROM s50_call_logs c
+       ${clause}`,
+      params
+    );
+
     params.push(limit, offset);
-    const records = await query(`SELECT id,call_id,start_at,direction,call_from,call_to,trunk,did_number,duration_seconds,talk_duration_seconds,status,recording FROM s50_call_logs ${clause} ORDER BY start_at DESC,id DESC LIMIT $${params.length-1} OFFSET $${params.length}`, params);
-    res.json({ records: records.rows, total: count.rows[0].total, limit, offset });
-  } catch (err) { next(err); }
+
+    const records = await query(`
+      SELECT
+        c.id,
+        c.call_id,
+        c.start_at,
+        c.direction,
+        c.call_type,
+        c.call_from,
+        c.call_to,
+        ef.username AS from_name,
+        et.username AS to_name,
+        c.trunk,
+        c.did_number,
+        c.duration_seconds,
+        c.talk_duration_seconds,
+        c.status,
+        c.recording
+      FROM s50_call_logs c
+      LEFT JOIN s50_extensions ef
+        ON ef.extension_number = c.call_from
+      LEFT JOIN s50_extensions et
+        ON et.extension_number = c.call_to
+      ${clause}
+      ORDER BY c.start_at DESC, c.id DESC
+      LIMIT $${params.length - 1}
+      OFFSET $${params.length}
+    `, params);
+
+    res.json({
+      records: records.rows,
+      total: count.rows[0].total,
+      limit,
+      offset
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/extensions/sync', async (req, res, next) => {
+  try {
+    if (!['admin', 'manager', 'super_admin'].includes(req.user?.role)) {
+      const err = new Error('Administrator or Manager access required.');
+      err.statusCode = 403;
+      throw err;
+    }
+
+    const result = await s50.syncExtensions();
+    res.json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/extensions', async (req, res, next) => {
+  try {
+    if (!['admin', 'manager', 'super_admin'].includes(req.user?.role)) {
+      const err = new Error('Administrator or Manager access required.');
+      err.statusCode = 403;
+      throw err;
+    }
+
+    const records = await s50.getExtensionDirectory();
+    res.json({ records });
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.get('/status', async (req, res, next) => {
@@ -71,7 +216,33 @@ router.post('/sync', async (req, res, next) => {
 router.get('/:id/recording', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    if (!Number.isSafeInteger(id) || id < 1) throw new ValidationError('Invalid CDR record ID.');
+    if (!Number.isSafeInteger(id) || id < 1) {
+      throw new ValidationError('Invalid CDR record ID.');
+    }
+
+    // Normal users cannot retrieve recordings belonging to
+    // extension-to-extension (internal) calls.
+    if (req.user?.role === 'user') {
+      const access = await query(
+        'SELECT call_type FROM s50_call_logs WHERE id = $1',
+        [id]
+      );
+
+      if (!access.rows.length) {
+        const err = new Error('CDR record not found.');
+        err.statusCode = 404;
+        throw err;
+      }
+
+      if (access.rows[0].call_type === 'internal') {
+        const err = new Error(
+          'Recording access is not permitted for internal calls.'
+        );
+        err.statusCode = 403;
+        throw err;
+      }
+    }
+
     const result = await s50.getRecording(id);
     res.setHeader('Content-Type', result.contentType || 'audio/wav');
     res.setHeader('Cache-Control', 'private, no-store');

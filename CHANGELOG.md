@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.4.0
+
+- Added S50 CDR access classification for Internal, Inbound, and Outbound calls.
+- Added server-side role-based CDR visibility: Super Admin, Admin, and Manager can view all S50 calls; Normal users cannot view Internal calls.
+- Added independent recording authorization so Normal users cannot retrieve recordings belonging to Internal calls.
+- Added Manager as an application user role without granting Administrator/Super Administrator Settings privileges.
+- Added cached S50 extension directory data for extension-name display and searching.
+- Added extension-name enrichment to S50 CDR From/To endpoints while preserving the original extension numbers.
+- Added protected S50 extension-directory synchronization and lookup endpoints for privileged roles.
+- Added explicit validation preventing unsupported S50 CDR types from being inserted without a call classification.
+- Preserved existing Visitor Register functionality and the read-only archived manual Call Log.
+- Auto Sync remains disabled pending verification of the new access-control behavior.
+
+
 ## 1.3.3
 
 - Fixed S50 CDR Reset Filters so it immediately reloads the default date-range results.
